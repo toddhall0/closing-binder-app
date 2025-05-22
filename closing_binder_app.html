@@ -1,0 +1,1011 @@
+                <div class="document-list" id="documentList">
+                    <h4 style="margin-bottom: 15px; color: #495057;">Documents (0)</h4>
+                    <div class="empty-state">
+                        <i class="fas fa-file-pdf"></i>
+                        <p>No documents uploaded yet</p>
+                    </div>
+                </div><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Closing Binder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .main-content {
+            display: flex;
+            min-height: 600px;
+        }
+
+        .sidebar {
+            width: 350px;
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            padding: 30px;
+        }
+
+        .upload-zone {
+            border: 3px dashed #6c757d;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: white;
+        }
+
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: #007bff;
+            background: #f0f8ff;
+            transform: translateY(-2px);
+        }
+
+        .upload-zone i {
+            font-size: 3rem;
+            color: #6c757d;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .upload-zone.dragover i {
+            color: #007bff;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .document-list {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .document-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .document-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .document-item.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .document-icon {
+            width: 40px;
+            height: 40px;
+            background: #dc3545;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 12px;
+            font-size: 12px;
+        }
+
+        .document-info {
+            flex: 1;
+        }
+
+        .document-name {
+            font-weight: 500;
+            margin-bottom: 2px;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 3px;
+            transition: background-color 0.2s;
+        }
+
+        .document-name:hover {
+            background-color: rgba(255,255,255,0.8);
+        }
+
+        .document-name-input {
+            width: 100%;
+            border: none;
+            background: white;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .document-size {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .document-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-download {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-download:hover {
+            background: #218838;
+        }
+
+        .btn-remove {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-remove:hover {
+            background: #c82333;
+        }
+
+        .viewer-section {
+            flex: 1;
+            padding: 30px;
+            background: white;
+        }
+
+        .binder-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .binder-title {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            font-weight: 300;
+        }
+
+        .binder-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,123,255,0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .toc-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .toc-title {
+            font-size: 1.4rem;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .toc-list {
+            list-style: none;
+        }
+
+        .toc-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #dee2e6;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .toc-item:hover {
+            background: rgba(0,123,255,0.1);
+            padding-left: 10px;
+            border-radius: 5px;
+        }
+
+        .toc-item:last-child {
+            border-bottom: none;
+        }
+
+        .toc-number {
+            font-weight: bold;
+            color: #007bff;
+            margin-right: 15px;
+        }
+
+        .toc-name {
+            flex: 1;
+            color: #2c3e50;
+        }
+
+        .toc-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .pdf-viewer {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pdf-placeholder {
+            color: #6c757d;
+            font-size: 1.2rem;
+        }
+
+        .pdf-embed {
+            width: 100%;
+            height: 600px;
+            border: none;
+            border-radius: 8px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .client-info {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 10px;
+        }
+
+        .info-label {
+            font-weight: 500;
+            width: 120px;
+            color: #495057;
+        }
+
+        .info-input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .style-options {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .style-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .style-label {
+            font-weight: 500;
+            width: 100px;
+            color: #495057;
+            font-size: 14px;
+        }
+
+        .style-select {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .cover-preview, .toc-preview {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 30px;
+            margin: 20px 0;
+            min-height: 400px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            page-break-after: always;
+        }
+
+        .cover-modern {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .cover-classic {
+            background: white;
+            border: 3px solid #2c3e50;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .cover-elegant {
+            background: #f8f9fa;
+            border-left: 10px solid #007bff;
+            padding-left: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .cover-title {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 30px;
+        }
+
+        .cover-subtitle {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            opacity: 0.8;
+        }
+
+        .cover-info {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .cover-date {
+            font-size: 1rem;
+            margin-top: 30px;
+            opacity: 0.7;
+        }
+
+        .toc-style-formal {
+            font-family: 'Times New Roman', serif;
+        }
+
+        .toc-style-modern {
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .toc-style-elegant {
+            font-family: 'Georgia', serif;
+        }
+
+        .generate-section {
+            background: #e3f2fd;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-folder-open"></i> Professional Closing Binder</h1>
+            <p>Create organized, professional document binders for your clients</p>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="client-info">
+                    <h3 style="margin-bottom: 15px; color: #2c3e50;">Client Information</h3>
+                    <div class="info-row">
+                        <label class="info-label">Client Name:</label>
+                        <input type="text" class="info-input" id="clientName" placeholder="Enter client name">
+                    </div>
+                    <div class="info-row">
+                        <label class="info-label">Matter:</label>
+                        <input type="text" class="info-input" id="matterType" placeholder="e.g., Real Estate Closing">
+                    </div>
+                    <div class="info-row">
+                        <label class="info-label">Date:</label>
+                        <input type="date" class="info-input" id="closingDate">
+                    </div>
+                </div>
+
+                <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h3>Drop PDF Files Here</h3>
+                    <p>or click to browse</p>
+                    <small>Supports multiple PDF files</small>
+                </div>
+                <input type="file" id="fileInput" class="file-input" accept=".pdf" multiple>
+
+                <div class="style-options">
+                    <h3 style="margin-bottom: 15px; color: #2c3e50;">Document Styles</h3>
+                    <div class="style-row">
+                        <label class="style-label">Cover Page:</label>
+                        <select class="style-select" id="coverStyle" onchange="updateCoverPreview()">
+                            <option value="modern">Modern Gradient</option>
+                            <option value="classic">Classic Professional</option>
+                            <option value="elegant">Elegant Minimal</option>
+                        </select>
+                    </div>
+                    <div class="style-row">
+                        <label class="style-label">TOC Style:</label>
+                        <select class="style-select" id="tocStyle" onchange="updateTOCPreview()">
+                            <option value="modern">Modern</option>
+                            <option value="formal">Formal</option>
+                            <option value="elegant">Elegant</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="generate-section">
+                    <h3 style="margin-bottom: 15px; color: #1976d2;"><i class="fas fa-magic"></i> Generate Pages</h3>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="generateCoverPage()">
+                            <i class="fas fa-file-alt"></i> Preview Cover
+                        </button>
+                        <button class="btn btn-primary" onclick="generateTOC()">
+                            <i class="fas fa-list"></i> Preview TOC
+                        </button>
+                        <button class="btn btn-secondary" onclick="printPages()">
+                            <i class="fas fa-print"></i> Print Pages
+                        </button>
+                    </div>
+                </div>
+                    <h4 style="margin-bottom: 15px; color: #495057;">Documents (0)</h4>
+                    <div class="empty-state">
+                        <i class="fas fa-file-pdf"></i>
+                        <p>No documents uploaded yet</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="viewer-section">
+                <div class="success-message" id="successMessage">
+                    <i class="fas fa-check-circle"></i> Binder updated successfully!
+                </div>
+
+                <div class="binder-header">
+                    <h2 class="binder-title">Closing Binder Preview</h2>
+                    <div class="binder-actions">
+                        <button class="btn btn-secondary" onclick="showDocumentView()">
+                            <i class="fas fa-eye"></i> Document View
+                        </button>
+                        <button class="btn btn-primary" onclick="exportBinder()">
+                            <i class="fas fa-download"></i> Export Binder
+                        </button>
+                    </div>
+                </div>
+
+                <div id="documentView" class="pdf-viewer">
+                    <div class="pdf-placeholder">
+                        <i class="fas fa-eye"></i><br>
+                        Select a document to preview
+                    </div>
+                </div>
+
+                <div id="coverPreview" style="display: none;"></div>
+                <div id="tocPreview" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let documents = [];
+        let currentDocument = null;
+        let editingDocument = null;
+
+        // Set today's date as default
+        document.getElementById('closingDate').valueAsDate = new Date();
+
+        // File upload handling
+        const fileInput = document.getElementById('fileInput');
+        const uploadZone = document.querySelector('.upload-zone');
+        const documentList = document.getElementById('documentList');
+
+        fileInput.addEventListener('change', handleFiles);
+
+        // Drag and drop functionality
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files).filter(file => file.type === 'application/pdf');
+            addDocuments(files);
+        });
+
+        function handleFiles(e) {
+            const files = Array.from(e.target.files);
+            addDocuments(files);
+        }
+
+        function addDocuments(files) {
+            files.forEach(file => {
+                if (file.type === 'application/pdf') {
+                    const doc = {
+                        id: Date.now() + Math.random(),
+                        name: file.name,
+                        displayName: file.name.replace('.pdf', ''),
+                        size: formatFileSize(file.size),
+                        file: file,
+                        url: URL.createObjectURL(file)
+                    };
+                    documents.push(doc);
+                }
+            });
+            updateDocumentList();
+            showSuccessMessage();
+        }
+
+        function updateDocumentList() {
+            const listContainer = document.getElementById('documentList');
+            const count = documents.length;
+            
+            if (count === 0) {
+                listContainer.innerHTML = `
+                    <h4 style="margin-bottom: 15px; color: #495057;">Documents (0)</h4>
+                    <div class="empty-state">
+                        <i class="fas fa-file-pdf"></i>
+                        <p>No documents uploaded yet</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `<h4 style="margin-bottom: 15px; color: #495057;">Documents (${count})</h4>`;
+            
+            documents.forEach((doc, index) => {
+                const isEditing = editingDocument === doc.id;
+                html += `
+                    <div class="document-item ${currentDocument && currentDocument.id === doc.id ? 'active' : ''}" onclick="selectDocument(${doc.id})">
+                        <div class="document-icon">PDF</div>
+                        <div class="document-info">
+                            <div class="document-name" ${isEditing ? '' : `ondblclick="startRename(${doc.id}); event.stopPropagation();"`}>
+                                ${isEditing ? 
+                                    `<input type="text" class="document-name-input" value="${doc.displayName}" 
+                                     onblur="finishRename(${doc.id}, this.value)" 
+                                     onkeypress="handleRenameKeypress(event, ${doc.id}, this.value)" 
+                                     onclick="event.stopPropagation();" autofocus>` : 
+                                    doc.displayName
+                                }
+                            </div>
+                            <div class="document-size">${doc.size} • Double-click name to rename</div>
+                        </div>
+                        <div class="document-actions">
+                            <button class="btn-small btn-download" onclick="downloadDocument(${doc.id}); event.stopPropagation();" title="Download">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <button class="btn-small btn-remove" onclick="removeDocument(${doc.id}); event.stopPropagation();" title="Remove">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            listContainer.innerHTML = html;
+        }
+
+        function startRename(docId) {
+            editingDocument = docId;
+            updateDocumentList();
+        }
+
+        function finishRename(docId, newName) {
+            const doc = documents.find(d => d.id === docId);
+            if (doc && newName.trim()) {
+                doc.displayName = newName.trim();
+            }
+            editingDocument = null;
+            updateDocumentList();
+            updateTOCPreview();
+        }
+
+        function handleRenameKeypress(event, docId, newName) {
+            if (event.key === 'Enter') {
+                finishRename(docId, newName);
+            } else if (event.key === 'Escape') {
+                editingDocument = null;
+                updateDocumentList();
+            }
+        }
+
+        function selectDocument(docId) {
+            currentDocument = documents.find(doc => doc.id === docId);
+            updateDocumentList();
+            displayDocument(currentDocument);
+            showDocumentView();
+        }
+
+        function displayDocument(doc) {
+            const viewer = document.getElementById('documentView');
+            viewer.innerHTML = `<iframe class="pdf-embed" src="${doc.url}"></iframe>`;
+        }
+
+        function removeDocument(docId) {
+            const docIndex = documents.findIndex(doc => doc.id === docId);
+            if (docIndex > -1) {
+                URL.revokeObjectURL(documents[docIndex].url);
+                documents.splice(docIndex, 1);
+                updateDocumentList();
+                updateTOCPreview();
+                
+                if (currentDocument && currentDocument.id === docId) {
+                    currentDocument = null;
+                    showDocumentView();
+                }
+            }
+        }
+
+        function downloadDocument(docId) {
+            const doc = documents.find(doc => doc.id === docId);
+            if (doc) {
+                const link = document.createElement('a');
+                link.href = doc.url;
+                link.download = doc.name;
+                link.click();
+            }
+        }
+
+        function showDocumentView() {
+            document.getElementById('documentView').style.display = 'flex';
+            document.getElementById('coverPreview').style.display = 'none';
+            document.getElementById('tocPreview').style.display = 'none';
+            
+            if (!currentDocument) {
+                document.getElementById('documentView').innerHTML = `
+                    <div class="pdf-placeholder">
+                        <i class="fas fa-eye"></i><br>
+                        Select a document to preview
+                    </div>
+                `;
+            }
+        }
+
+        function generateCoverPage() {
+            const clientName = document.getElementById('clientName').value || '[Client Name]';
+            const matterType = document.getElementById('matterType').value || '[Matter Type]';
+            const closingDate = document.getElementById('closingDate').value || new Date().toISOString().split('T')[0];
+            const coverStyle = document.getElementById('coverStyle').value;
+            
+            const formattedDate = new Date(closingDate).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            let coverHTML = '';
+            
+            if (coverStyle === 'modern') {
+                coverHTML = `
+                    <div class="cover-preview cover-modern">
+                        <div class="cover-title">CLOSING BINDER</div>
+                        <div class="cover-subtitle">${matterType}</div>
+                        <div class="cover-info">Prepared for: ${clientName}</div>
+                        <div class="cover-date">${formattedDate}</div>
+                    </div>
+                `;
+            } else if (coverStyle === 'classic') {
+                coverHTML = `
+                    <div class="cover-preview cover-classic">
+                        <div class="cover-title" style="color: #2c3e50;">CLOSING BINDER</div>
+                        <div class="cover-subtitle" style="color: #2c3e50;">${matterType}</div>
+                        <div class="cover-info" style="color: #2c3e50;">Client: ${clientName}</div>
+                        <div class="cover-date" style="color: #2c3e50;">${formattedDate}</div>
+                    </div>
+                `;
+            } else if (coverStyle === 'elegant') {
+                coverHTML = `
+                    <div class="cover-preview cover-elegant">
+                        <div class="cover-title" style="color: #2c3e50;">Closing Binder</div>
+                        <div class="cover-subtitle" style="color: #495057;">${matterType}</div>
+                        <div class="cover-info" style="color: #495057;">Prepared for ${clientName}</div>
+                        <div class="cover-date" style="color: #6c757d;">${formattedDate}</div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('coverPreview').innerHTML = coverHTML;
+            document.getElementById('documentView').style.display = 'none';
+            document.getElementById('tocPreview').style.display = 'none';
+            document.getElementById('coverPreview').style.display = 'block';
+        }
+
+        function generateTOC() {
+            if (documents.length === 0) {
+                alert('Please upload some documents first.');
+                return;
+            }
+
+            updateTOCPreview();
+            document.getElementById('documentView').style.display = 'none';
+            document.getElementById('coverPreview').style.display = 'none';
+            document.getElementById('tocPreview').style.display = 'block';
+        }
+
+        function updateTOCPreview() {
+            const tocStyle = document.getElementById('tocStyle').value;
+            const styleClass = `toc-style-${tocStyle}`;
+            
+            let tocHTML = `
+                <div class="toc-preview ${styleClass}">
+                    <h2 style="text-align: center; margin-bottom: 40px; color: #2c3e50; border-bottom: 2px solid #e9ecef; padding-bottom: 20px;">
+                        TABLE OF CONTENTS
+                    </h2>
+                    <div style="max-width: 600px; margin: 0 auto;">
+            `;
+            
+            documents.forEach((doc, index) => {
+                tocHTML += `
+                    <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px dotted #ccc; cursor: pointer;" onclick="selectDocument(${doc.id})">
+                        <span><strong>${index + 1}.</strong> ${doc.displayName}</span>
+                        <span style="margin-left: 20px;">Page ${index + 2}</span>
+                    </div>
+                `;
+            });
+
+            tocHTML += `
+                    </div>
+                    <div style="margin-top: 40px; text-align: center; color: #6c757d; font-style: italic;">
+                        ${documents.length} Documents • Generated ${new Date().toLocaleDateString()}
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('tocPreview').innerHTML = tocHTML;
+        }
+
+        function updateCoverPreview() {
+            // Auto-refresh cover if it's currently displayed
+            if (document.getElementById('coverPreview').style.display === 'block') {
+                generateCoverPage();
+            }
+        }
+
+        function updateTOCPreview() {
+            // Auto-refresh TOC if it's currently displayed
+            if (document.getElementById('tocPreview').style.display === 'block') {
+                generateTOC();
+            }
+        }
+
+        function printPages() {
+            // Generate both cover and TOC for printing
+            generateCoverPage();
+            updateTOCPreview();
+            
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        }
+
+        function exportBinder() {
+            if (documents.length === 0) {
+                alert('Please upload some documents first.');
+                return;
+            }
+
+            const clientName = document.getElementById('clientName').value || 'Client';
+            const matterType = document.getElementById('matterType').value || 'Matter';
+            const closingDate = document.getElementById('closingDate').value || new Date().toISOString().split('T')[0];
+
+            // Create a detailed summary document
+            const summary = `
+PROFESSIONAL CLOSING BINDER
+==========================
+
+CLIENT INFORMATION
+------------------
+Client Name: ${clientName}
+Matter Type: ${matterType}
+Closing Date: ${closingDate}
+Total Documents: ${documents.length}
+
+TABLE OF CONTENTS
+=================
+${documents.map((doc, index) => `${String(index + 1).padStart(2, '0')}. ${doc.displayName}`).join('\n')}
+
+DOCUMENT DETAILS
+================
+${documents.map((doc, index) => `
+Document ${index + 1}: ${doc.displayName}
+Original File: ${doc.name}
+File Size: ${doc.size}
+`).join('\n')}
+
+EXPORT INFORMATION
+==================
+Generated: ${new Date().toLocaleString()}
+Generated by: Professional Closing Binder Application
+File Naming Convention: [Number]_[Document Name]
+
+INSTRUCTIONS
+============
+- Documents are numbered sequentially for easy organization
+- Original filenames are preserved in parentheses if different from display names  
+- Print this summary as the first page of your binder
+- Follow with individual documents in the order listed above
+
+© Professional Closing Binder App
+            `;
+
+            // Create and download summary file
+            const summaryBlob = new Blob([summary], { type: 'text/plain' });
+            const summaryUrl = URL.createObjectURL(summaryBlob);
+            
+            const link = document.createElement('a');
+            link.href = summaryUrl;
+            link.download = `${clientName.replace(/[^a-zA-Z0-9]/g, '_')}_${matterType.replace(/[^a-zA-Z0-9]/g, '_')}_ClosingBinder_Summary.txt`;
+            link.click();
+            
+            URL.revokeObjectURL(summaryUrl);
+
+            // Download all documents with sequential numbering
+            documents.forEach((doc, index) => {
+                setTimeout(() => {
+                    const link = document.createElement('a');
+                    link.href = doc.url;
+                    const filename = `${String(index + 1).padStart(2, '0')}_${doc.displayName.replace(/[^a-zA-Z0-9.-]/g, '_')}.pdf`;
+                    link.download = filename;
+                    link.click();
+                }, index * 500); // Stagger downloads
+            });
+
+            showSuccessMessage();
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function showSuccessMessage() {
+            const message = document.getElementById('successMessage');
+            message.style.display = 'block';
+            setTimeout(() => {
+                message.style.display = 'none';
+            }, 3000);
+        }
+
+        // Initialize
+        updateDocumentList();
+        updateCoverPreview();
+    </script>
+</body>
+</html>
