@@ -87,6 +87,28 @@
             font-size: 14px;
         }
 
+        .cover-upload {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .cover-upload-zone {
+            border: 2px dashed #6c757d;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .cover-upload-zone:hover, .cover-upload-zone.dragover {
+            border-color: #007bff;
+            background: #f0f8ff;
+        }
+
         .upload-zone {
             border: 3px dashed #6c757d;
             border-radius: 10px;
@@ -536,6 +558,11 @@
             justify-content: space-between;
             padding: 8px 20px;
             border-bottom: 1px dotted #ccc;
+            cursor: pointer;
+        }
+
+        .toc-document:hover {
+            background: #f8f9fa;
         }
 
         .success-message {
@@ -546,6 +573,30 @@
             padding: 12px;
             margin-bottom: 20px;
             display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #007bff, #0056b3);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .cover-preview {
+            max-width: 200px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 10px;
         }
 
         @media (max-width: 1200px) {
@@ -565,7 +616,7 @@
     <div class="container">
         <div class="header">
             <h1><i class="fas fa-folder-open"></i> Professional Closing Binder</h1>
-            <p>Organize documents into professional sections with drag-and-drop functionality</p>
+            <p>Create professional PDF binders with clickable table of contents</p>
         </div>
 
         <div class="main-content">
@@ -585,6 +636,17 @@
                         <label class="info-label">Date:</label>
                         <input type="date" class="info-input" id="closingDate">
                     </div>
+                </div>
+
+                <div class="cover-upload">
+                    <h4 style="margin-bottom: 15px; color: #2c3e50;">Custom Cover Page (Optional)</h4>
+                    <div class="cover-upload-zone" onclick="document.getElementById('coverInput').click()">
+                        <i class="fas fa-file-image"></i>
+                        <p>Upload cover page image</p>
+                        <small>JPG, PNG, or PDF</small>
+                    </div>
+                    <input type="file" id="coverInput" class="file-input" accept=".jpg,.jpeg,.png,.pdf">
+                    <div id="coverPreviewContainer"></div>
                 </div>
 
                 <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
@@ -622,10 +684,14 @@
                         <button class="btn btn-secondary" onclick="generateTOC()">
                             <i class="fas fa-list"></i> Preview TOC
                         </button>
-                        <button class="btn btn-primary" onclick="exportBinder()">
-                            <i class="fas fa-download"></i> Export Binder
+                        <button class="btn btn-primary" onclick="generatePDFBinder()" id="exportBtn">
+                            <i class="fas fa-file-pdf"></i> Generate PDF Binder
                         </button>
                     </div>
+                </div>
+
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
                 </div>
 
                 <div class="add-section-form" id="addSectionForm">
@@ -664,6 +730,9 @@
         </div>
     </div>
 
+    <!-- PDF generation library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+
     <script>
         let documents = [];
         let sections = [];
@@ -671,6 +740,7 @@
         let editingDocument = null;
         let editingSection = null;
         let draggedDocument = null;
+        let customCoverPage = null;
 
         // Initialize with default sections
         const defaultSections = [
@@ -697,16 +767,19 @@
         function setupEventListeners() {
             const fileInput = document.getElementById('fileInput');
             const uploadZone = document.querySelector('.upload-zone');
+            const coverInput = document.getElementById('coverInput');
+            const coverZone = document.querySelector('.cover-upload-zone');
 
             fileInput.addEventListener('change', handleFiles);
+            coverInput.addEventListener('change', handleCoverUpload);
 
-            // Prevent default drag behaviors on document
+            // Prevent default drag behaviors
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 document.addEventListener(eventName, preventDefaults, false);
                 document.body.addEventListener(eventName, preventDefaults, false);
             });
 
-            // Highlight drop area when item is dragged over it
+            // File upload drag and drop
             ['dragenter', 'dragover'].forEach(eventName => {
                 uploadZone.addEventListener(eventName, highlight, false);
             });
@@ -715,8 +788,18 @@
                 uploadZone.addEventListener(eventName, unhighlight, false);
             });
 
-            // Handle dropped files
             uploadZone.addEventListener('drop', handleDrop, false);
+
+            // Cover upload drag and drop
+            ['dragenter', 'dragover'].forEach(eventName => {
+                coverZone.addEventListener(eventName, highlightCover, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                coverZone.addEventListener(eventName, unhighlightCover, false);
+            });
+
+            coverZone.addEventListener('drop', handleCoverDrop, false);
 
             function preventDefaults(e) {
                 e.preventDefault();
@@ -731,6 +814,14 @@
                 uploadZone.classList.remove('dragover');
             }
 
+            function highlightCover(e) {
+                coverZone.classList.add('dragover');
+            }
+
+            function unhighlightCover(e) {
+                coverZone.classList.remove('dragover');
+            }
+
             function handleDrop(e) {
                 const dt = e.dataTransfer;
                 const files = Array.from(dt.files).filter(file => file.type === 'application/pdf');
@@ -741,11 +832,59 @@
                     alert('Please drop only PDF files.');
                 }
             }
+
+            function handleCoverDrop(e) {
+                const dt = e.dataTransfer;
+                const files = Array.from(dt.files).filter(file => 
+                    file.type.startsWith('image/') || file.type === 'application/pdf'
+                );
+                
+                if (files.length > 0) {
+                    processCoverFile(files[0]);
+                } else {
+                    alert('Please drop an image (JPG, PNG) or PDF file.');
+                }
+            }
         }
 
         function handleFiles(e) {
             const files = Array.from(e.target.files);
             addDocuments(files);
+        }
+
+        function handleCoverUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                processCoverFile(file);
+            }
+        }
+
+        function processCoverFile(file) {
+            if (file.type.startsWith('image/') || file.type === 'application/pdf') {
+                customCoverPage = {
+                    file: file,
+                    url: URL.createObjectURL(file),
+                    type: file.type
+                };
+
+                // Show preview
+                const container = document.getElementById('coverPreviewContainer');
+                if (file.type.startsWith('image/')) {
+                    container.innerHTML = `
+                        <img src="${customCoverPage.url}" class="cover-preview" alt="Cover preview">
+                        <p style="font-size: 12px; color: #6c757d; margin-top: 5px;">Custom cover page uploaded</p>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <div style="padding: 10px; background: #f8f9fa; border-radius: 4px; margin-top: 10px;">
+                            <i class="fas fa-file-pdf" style="color: #dc3545;"></i>
+                            <span style="font-size: 12px; margin-left: 5px;">PDF cover page uploaded</span>
+                        </div>
+                    `;
+                }
+                
+                showSuccessMessage('Custom cover page uploaded successfully!');
+            }
         }
 
         function addDocuments(files) {
@@ -758,13 +897,22 @@
                         size: formatFileSize(file.size),
                         file: file,
                         url: URL.createObjectURL(file),
-                        sectionId: null // Unassigned initially
+                        sectionId: null
                     };
                     documents.push(doc);
                 }
             });
             updateUnassignedDocuments();
             showSuccessMessage('Documents uploaded successfully!');
+        }
+
+        function addSectionToData(name) {
+            const section = {
+                id: Date.now() + Math.random(),
+                name: name
+            };
+            sections.push(section);
+            return section;
         }
 
         function updateUnassignedDocuments() {
@@ -789,10 +937,11 @@
                 html += `
                     <div class="document-item" draggable="true" 
                          ondragstart="handleDocumentDragStart(event, ${doc.id})"
-                         ondragend="handleDocumentDragEnd(event)">
+                         ondragend="handleDocumentDragEnd(event)"
+                         data-doc-id="${doc.id}">
                         <div class="document-icon">PDF</div>
                         <div class="document-info">
-                            <div class="document-name" ${isEditing ? '' : `ondblclick="startRename(${doc.id}); event.stopPropagation();"`}>
+                            <div class="document-name" ${isEditing ? '' : `ondblclick="startRename(${doc.id}); event.stopPropagation();" title="Double-click to rename"`}>
                                 ${isEditing ? 
                                     `<input type="text" class="document-name-input" value="${doc.displayName}" 
                                      onblur="finishRename(${doc.id}, this.value)" 
@@ -801,7 +950,7 @@
                                     doc.displayName
                                 }
                             </div>
-                            <div class="document-size">${doc.size}</div>
+                            <div class="document-size">${doc.size} • Drag to section</div>
                         </div>
                         <div class="document-actions">
                             <button class="btn-small btn-download" onclick="downloadDocument(${doc.id}); event.stopPropagation();" title="Download">
@@ -816,42 +965,6 @@
             });
             
             unassignedList.innerHTML = html;
-        }
-
-        function handleDocumentDragStart(event, docId) {
-            draggedDocument = docId;
-            console.log('Started dragging document ID:', docId);
-            
-            // Safely add dragging class
-            if (event && event.target && event.target.classList) {
-                event.target.classList.add('dragging');
-            }
-            
-            // Set drag data
-            if (event && event.dataTransfer) {
-                event.dataTransfer.setData('text/plain', docId);
-                event.dataTransfer.effectAllowed = 'move';
-            }
-        }
-
-        function handleDocumentDragEnd(event) {
-            console.log('Drag end event triggered');
-            
-            // Clean up all dragging classes - safer approach
-            document.querySelectorAll('.dragging').forEach(el => {
-                el.classList.remove('dragging');
-            });
-            
-            draggedDocument = null;
-        }
-
-        function addSectionToData(name) {
-            const section = {
-                id: Date.now() + Math.random(),
-                name: name
-            };
-            sections.push(section);
-            return section;
         }
 
         function updateSectionsDisplay() {
@@ -890,18 +1003,15 @@
                         <div class="section-content">
                 `;
 
-                // Fix: Convert both IDs to strings for comparison and sort by order
                 let sectionDocs = documents.filter(doc => doc.sectionId && doc.sectionId.toString() === section.id.toString());
                 
-                // Sort by orderInSection if it exists, otherwise maintain original order
+                // Sort by orderInSection if it exists
                 sectionDocs.sort((a, b) => {
                     if (a.orderInSection !== undefined && b.orderInSection !== undefined) {
                         return a.orderInSection - b.orderInSection;
                     }
                     return 0;
                 });
-                
-                console.log(`Section ${section.name} (ID: ${section.id}) has ${sectionDocs.length} documents:`, sectionDocs.map(d => d.displayName));
                 
                 if (sectionDocs.length === 0) {
                     html += `
@@ -938,7 +1048,7 @@
                                             doc.displayName
                                         }
                                     </div>
-                                    <div class="document-size">${doc.size} • Drag to reorder, double-click name to rename</div>
+                                    <div class="document-size">${doc.size} • Drag to reorder</div>
                                 </div>
                                 <div class="document-actions">
                                     <button class="btn-small btn-download" onclick="downloadDocument(${doc.id}); event.stopPropagation();" title="Download">
@@ -966,15 +1076,32 @@
             container.innerHTML = html;
         }
 
+        // Drag and drop functions
+        function handleDocumentDragStart(event, docId) {
+            draggedDocument = docId;
+            if (event && event.target) {
+                event.target.classList.add('dragging');
+            }
+            if (event && event.dataTransfer) {
+                event.dataTransfer.setData('text/plain', docId.toString());
+                event.dataTransfer.effectAllowed = 'move';
+            }
+        }
+
+        function handleDocumentDragEnd(event) {
+            document.querySelectorAll('.dragging').forEach(el => {
+                el.classList.remove('dragging');
+            });
+            draggedDocument = null;
+        }
+
         function handleSectionDragOver(event, sectionId) {
             event.preventDefault();
             event.dataTransfer.dropEffect = 'move';
             event.currentTarget.classList.add('drag-over');
-            console.log('Dragging over section:', sectionId);
         }
 
         function handleSectionDragLeave(event) {
-            // Only remove highlight if we're actually leaving the section
             if (!event.currentTarget.contains(event.relatedTarget)) {
                 event.currentTarget.classList.remove('drag-over');
             }
@@ -984,47 +1111,100 @@
             event.preventDefault();
             event.currentTarget.classList.remove('drag-over');
             
-            // Get the document ID from drag data
             const docId = event.dataTransfer.getData('text/plain') || draggedDocument;
-            console.log('Dropped document ID:', docId, 'into section:', sectionId);
             
             if (docId) {
-                const doc = documents.find(d => d.id == docId); // Use == to handle string/number conversion
+                const doc = documents.find(d => d.id == docId);
                 if (doc) {
-                    console.log('Found document:', doc.displayName, 'moving to section');
-                    console.log('Before assignment - doc.sectionId:', doc.sectionId);
-                    
                     doc.sectionId = sectionId;
-                    
-                    console.log('After assignment - doc.sectionId:', doc.sectionId);
-                    console.log('Target section ID:', sectionId);
-                    console.log('All documents with their sectionIds:', documents.map(d => ({name: d.displayName, sectionId: d.sectionId})));
-                    
-                    // Immediately update displays
                     updateUnassignedDocuments();
                     updateSectionsDisplay();
                     showSuccessMessage(`"${doc.displayName}" moved to section successfully!`);
-                } else {
-                    console.error('Document not found with ID:', docId);
                 }
-            } else {
-                console.error('No document ID found in drop');
+            }
+            draggedDocument = null;
+        }
+
+        function handleSectionDocumentDragStart(event, docId) {
+            draggedDocument = docId;
+            if (event && event.target) {
+                event.target.classList.add('dragging');
+            }
+            if (event && event.dataTransfer) {
+                event.dataTransfer.setData('text/plain', docId.toString());
+                event.dataTransfer.effectAllowed = 'move';
+            }
+        }
+
+        function handleDocumentDragOver(event, targetDocId) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.dataTransfer.dropEffect = 'move';
+            
+            if (draggedDocument && draggedDocument != targetDocId) {
+                event.currentTarget.classList.add('drag-over');
+            }
+        }
+
+        function handleDocumentDragLeave(event) {
+            if (!event.currentTarget.contains(event.relatedTarget)) {
+                event.currentTarget.classList.remove('drag-over');
+            }
+        }
+
+        function handleDocumentReorder(event, targetDocId) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            document.querySelectorAll('.drag-over').forEach(el => {
+                el.classList.remove('drag-over');
+            });
+            
+            const draggedDocId = event.dataTransfer.getData('text/plain') || draggedDocument;
+            
+            if (draggedDocId && draggedDocId != targetDocId) {
+                const draggedDoc = documents.find(d => d.id.toString() === draggedDocId.toString());
+                const targetDoc = documents.find(d => d.id.toString() === targetDocId.toString());
+                
+                if (draggedDoc && targetDoc) {
+                    if (draggedDoc.sectionId && targetDoc.sectionId && 
+                        draggedDoc.sectionId.toString() === targetDoc.sectionId.toString()) {
+                        reorderDocumentsInSection(draggedDoc, targetDoc);
+                    } else {
+                        draggedDoc.sectionId = targetDoc.sectionId;
+                        showSuccessMessage(`"${draggedDoc.displayName}" moved to new section`);
+                    }
+                    
+                    updateUnassignedDocuments();
+                    updateSectionsDisplay();
+                }
             }
             
             draggedDocument = null;
         }
 
-        function moveDocumentToUnassigned(docId) {
-            const doc = documents.find(d => d.id === docId);
-            if (doc) {
-                console.log('Moving document back to unassigned:', doc.displayName);
-                doc.sectionId = null;
-                updateUnassignedDocuments();
-                updateSectionsDisplay();
-                showSuccessMessage('Document moved to unassigned!');
+        function reorderDocumentsInSection(draggedDoc, targetDoc) {
+            let sectionDocs = documents.filter(doc => 
+                doc.sectionId && doc.sectionId.toString() === draggedDoc.sectionId.toString()
+            );
+            
+            const draggedIndex = sectionDocs.findIndex(doc => doc.id.toString() === draggedDoc.id.toString());
+            const targetIndex = sectionDocs.findIndex(doc => doc.id.toString() === targetDoc.id.toString());
+            
+            if (draggedIndex !== -1 && targetIndex !== -1 && draggedIndex !== targetIndex) {
+                const newOrder = [...sectionDocs];
+                const [draggedElement] = newOrder.splice(draggedIndex, 1);
+                newOrder.splice(targetIndex, 0, draggedElement);
+                
+                newOrder.forEach((doc, index) => {
+                    doc.orderInSection = index;
+                });
+                
+                showSuccessMessage(`"${draggedDoc.displayName}" reordered within section`);
             }
         }
 
+        // Document management functions
         function selectDocument(docId) {
             currentDocument = documents.find(doc => doc.id === docId);
             updateSectionsDisplay();
@@ -1046,47 +1226,6 @@
             document.getElementById('documentPreview').style.display = 'none';
             document.getElementById('tocPreview').style.display = 'block';
             generateTOC();
-        }
-
-        function showAddSectionForm() {
-            document.getElementById('addSectionForm').style.display = 'block';
-            document.getElementById('newSectionName').focus();
-        }
-
-        function hideAddSectionForm() {
-            document.getElementById('addSectionForm').style.display = 'none';
-            document.getElementById('newSectionName').value = '';
-        }
-
-        function addSection() {
-            const name = document.getElementById('newSectionName').value.trim();
-            if (name) {
-                addSectionToData(name);
-                updateSectionsDisplay();
-                hideAddSectionForm();
-                showSuccessMessage('Section added successfully!');
-            }
-        }
-
-        function removeSection(sectionId) {
-            if (confirm('Are you sure you want to remove this section? Documents will be moved to unassigned.')) {
-                // Find the section
-                const section = sections.find(s => s.id === sectionId);
-                
-                // Move all documents in this section back to unassigned
-                documents.forEach(doc => {
-                    if (doc.sectionId === sectionId) {
-                        doc.sectionId = null;
-                    }
-                });
-                
-                // Remove section from sections array
-                sections = sections.filter(s => s.id !== sectionId);
-                
-                updateUnassignedDocuments();
-                updateSectionsDisplay();
-                showSuccessMessage('Section removed successfully!');
-            }
         }
 
         function startRename(docId) {
@@ -1116,166 +1255,13 @@
             }
         }
 
-        // New function for handling drag and drop reordering within sections
-        function handleSectionDocumentDragStart(event, docId) {
-            draggedDocument = docId;
-            console.log('Started dragging section document ID:', docId);
-            
-            // Safely add dragging class
-            if (event && event.target && event.target.classList) {
-                event.target.classList.add('dragging');
-            }
-            
-            // Set drag data
-            if (event && event.dataTransfer) {
-                event.dataTransfer.setData('text/plain', docId);
-                event.dataTransfer.effectAllowed = 'move';
-            }
-        }
-
-        function handleDocumentDragOver(event, targetDocId) {
-            event.preventDefault();
-            event.stopPropagation();
-            event.dataTransfer.dropEffect = 'move';
-            
-            // Don't highlight if dragging over self
-            if (draggedDocument && draggedDocument != targetDocId) {
-                event.currentTarget.classList.add('drag-over');
-                console.log('Dragging over document:', targetDocId);
-            }
-        }
-
-        function handleDocumentReorder(event, targetDocId) {
-            event.preventDefault();
-            event.stopPropagation();
-            
-            // Remove drag-over class from all elements
-            document.querySelectorAll('.drag-over').forEach(el => {
-                el.classList.remove('drag-over');
-            });
-            
-            const draggedDocId = event.dataTransfer.getData('text/plain') || draggedDocument;
-            console.log('Attempting to reorder:', draggedDocId, 'near', targetDocId);
-            
-            if (draggedDocId && draggedDocId != targetDocId) {
-                const draggedDoc = documents.find(d => d.id == draggedDocId);
-                const targetDoc = documents.find(d => d.id == targetDocId);
-                
-                console.log('Found docs:', draggedDoc ? draggedDoc.displayName : 'none', targetDoc ? targetDoc.displayName : 'none');
-                
-                if (draggedDoc && targetDoc) {
-                    // If both docs are in the same section, reorder them
-                    if (draggedDoc.sectionId === targetDoc.sectionId) {
-                        console.log('Reordering within same section');
-                        reorderDocumentsInSection(draggedDoc, targetDoc);
-                    } else {
-                        // Move to different section
-                        console.log('Moving to different section');
-                        draggedDoc.sectionId = targetDoc.sectionId;
-                        showSuccessMessage(`"${draggedDoc.displayName}" moved to new section`);
-                    }
-                    
-                    updateUnassignedDocuments();
-                    updateSectionsDisplay();
-                }
-            }
-            
-            draggedDocument = null;
-        }
-
-        function handleDocumentDragLeave(event) {
-            event.currentTarget.classList.remove('drag-over');
-        }
-
-        function reorderDocumentsInSection(draggedDoc, targetDoc) {
-            console.log('=== REORDER START ===');
-            console.log('Reordering:', draggedDoc.displayName, 'relative to', targetDoc.displayName);
-            console.log('Section ID:', draggedDoc.sectionId);
-            
-            // Get all documents in this section
-            let sectionDocs = documents.filter(doc => 
-                doc.sectionId && doc.sectionId.toString() === draggedDoc.sectionId.toString()
-            );
-            
-            console.log('Documents in section BEFORE reorder:', sectionDocs.map(d => d.displayName));
-            
-            // Find current positions
-            const draggedIndex = sectionDocs.findIndex(doc => doc.id.toString() === draggedDoc.id.toString());
-            const targetIndex = sectionDocs.findIndex(doc => doc.id.toString() === targetDoc.id.toString());
-            
-            console.log('Dragged index:', draggedIndex, 'Target index:', targetIndex);
-            
-            if (draggedIndex !== -1 && targetIndex !== -1 && draggedIndex !== targetIndex) {
-                // Create a new array with the reordered documents
-                const newOrder = [...sectionDocs];
-                
-                // Remove the dragged document
-                const [draggedElement] = newOrder.splice(draggedIndex, 1);
-                
-                // Insert it at the target position
-                newOrder.splice(targetIndex, 0, draggedElement);
-                
-                console.log('Documents in section AFTER reorder:', newOrder.map(d => d.displayName));
-                
-                // Update the order property for all documents in this section
-                newOrder.forEach((doc, index) => {
-                    doc.orderInSection = index;
-                    console.log(`Setting ${doc.displayName} order to ${index}`);
-                });
-                
-                showSuccessMessage(`"${draggedDoc.displayName}" moved within section`);
-                console.log('=== REORDER COMPLETE ===');
-            } else {
-                console.log('Reorder failed - invalid indices or same position');
-            }
-        }
-
-        function startSectionRename(sectionId) {
-            console.log('=== SECTION RENAME START ===');
-            console.log('Starting section rename for ID:', sectionId);
-            console.log('Current editingSection:', editingSection);
-            console.log('All sections:', sections.map(s => ({id: s.id, name: s.name})));
-            
-            editingSection = sectionId;
-            console.log('Set editingSection to:', editingSection);
-            updateSectionsDisplay();
-        }
-
-        function finishSectionRename(sectionId, newName) {
-            console.log('=== SECTION RENAME FINISH ===');
-            console.log('Finishing section rename for ID:', sectionId, 'new name:', newName);
-            console.log('Looking for section with ID:', sectionId);
-            
-            const section = sections.find(s => {
-                console.log('Comparing section ID', s.id, 'with target', sectionId, 'match:', s.id.toString() === sectionId.toString());
-                return s.id.toString() === sectionId.toString();
-            });
-            
-            console.log('Found section:', section ? section.name : 'NOT FOUND');
-            
-            if (section && newName.trim()) {
-                const oldName = section.name;
-                section.name = newName.trim();
-                console.log('Renamed section from:', oldName, 'to:', section.name);
-                showSuccessMessage(`Section renamed to "${section.name}"`);
-            } else {
-                console.log('Rename failed - section not found or empty name');
-            }
-            
-            editingSection = null;
-            console.log('Reset editingSection to null');
-            updateSectionsDisplay();
-        }
-
-        function handleSectionRenameKeypress(event, sectionId, newName) {
-            console.log('Section rename keypress:', event.key, 'for section:', sectionId);
-            if (event.key === 'Enter') {
-                console.log('Enter key pressed - finishing rename');
-                finishSectionRename(sectionId, newName);
-            } else if (event.key === 'Escape') {
-                console.log('Escape key pressed - canceling rename');
-                editingSection = null;
+        function moveDocumentToUnassigned(docId) {
+            const doc = documents.find(d => d.id === docId);
+            if (doc) {
+                doc.sectionId = null;
+                updateUnassignedDocuments();
                 updateSectionsDisplay();
+                showSuccessMessage('Document moved to unassigned!');
             }
         }
 
@@ -1312,6 +1298,68 @@
             }
         }
 
+        // Section management functions
+        function showAddSectionForm() {
+            document.getElementById('addSectionForm').style.display = 'block';
+            document.getElementById('newSectionName').focus();
+        }
+
+        function hideAddSectionForm() {
+            document.getElementById('addSectionForm').style.display = 'none';
+            document.getElementById('newSectionName').value = '';
+        }
+
+        function addSection() {
+            const name = document.getElementById('newSectionName').value.trim();
+            if (name) {
+                addSectionToData(name);
+                updateSectionsDisplay();
+                hideAddSectionForm();
+                showSuccessMessage('Section added successfully!');
+            }
+        }
+
+        function startSectionRename(sectionId) {
+            editingSection = sectionId;
+            updateSectionsDisplay();
+        }
+
+        function finishSectionRename(sectionId, newName) {
+            const section = sections.find(s => s.id.toString() === sectionId.toString());
+            if (section && newName.trim()) {
+                section.name = newName.trim();
+                showSuccessMessage(`Section renamed to "${section.name}"`);
+            }
+            editingSection = null;
+            updateSectionsDisplay();
+        }
+
+        function handleSectionRenameKeypress(event, sectionId, newName) {
+            if (event.key === 'Enter') {
+                finishSectionRename(sectionId, newName);
+            } else if (event.key === 'Escape') {
+                editingSection = null;
+                updateSectionsDisplay();
+            }
+        }
+
+        function removeSection(sectionId) {
+            if (confirm('Are you sure you want to remove this section? Documents will be moved to unassigned.')) {
+                documents.forEach(doc => {
+                    if (doc.sectionId === sectionId) {
+                        doc.sectionId = null;
+                    }
+                });
+                
+                sections = sections.filter(s => s.id !== sectionId);
+                
+                updateUnassignedDocuments();
+                updateSectionsDisplay();
+                showSuccessMessage('Section removed successfully!');
+            }
+        }
+
+        // TOC generation
         function generateTOC() {
             const clientName = document.getElementById('clientName').value || '[Client Name]';
             const matterType = document.getElementById('matterType').value || '[Matter Type]';
@@ -1335,9 +1383,12 @@
 
             let hasContent = false;
             sections.forEach((section, sectionIndex) => {
-                const sectionDocs = documents.filter(doc => 
+                let sectionDocs = documents.filter(doc => 
                     doc.sectionId && doc.sectionId.toString() === section.id.toString()
-                ).sort((a, b) => {
+                );
+                
+                // Sort by orderInSection
+                sectionDocs.sort((a, b) => {
                     if (a.orderInSection !== undefined && b.orderInSection !== undefined) {
                         return a.orderInSection - b.orderInSection;
                     }
@@ -1356,7 +1407,7 @@
                     sectionDocs.forEach((doc, docIndex) => {
                         const docNumber = `${sectionNumber}.${docIndex + 1}`;
                         tocHTML += `
-                            <div class="toc-document" onclick="selectDocument(${doc.id})" style="cursor: pointer;">
+                            <div class="toc-document" onclick="selectDocument(${doc.id})">
                                 <span><strong>${docNumber}</strong> ${doc.displayName}</span>
                                 <span>Page ${(sectionIndex * 10) + docIndex + 3}</span>
                             </div>
@@ -1384,13 +1435,14 @@
             }
 
             tocHTML += '</div>';
-
             document.getElementById('tocPreview').innerHTML = tocHTML;
         }
 
-        function exportBinder() {
-            if (documents.length === 0) {
-                alert('Please upload some documents first.');
+        // PDF Binder Generation
+        async function generatePDFBinder() {
+            const assignedDocs = documents.filter(d => d.sectionId);
+            if (assignedDocs.length === 0) {
+                alert('Please assign some documents to sections first.');
                 return;
             }
 
@@ -1398,211 +1450,268 @@
             const matterType = document.getElementById('matterType').value || 'Matter';
             const closingDate = document.getElementById('closingDate').value || new Date().toISOString().split('T')[0];
 
-            // Create cover page HTML for printing/saving
-            const coverPageHTML = `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Cover Page - ${clientName} ${matterType}</title>
-    <style>
-        body { font-family: 'Times New Roman', serif; padding: 2in; text-align: center; }
-        .cover-title { font-size: 2.5rem; font-weight: bold; margin-bottom: 2rem; }
-        .cover-subtitle { font-size: 1.5rem; margin-bottom: 1rem; }
-        .cover-info { font-size: 1.2rem; margin-bottom: 0.5rem; }
-        .cover-date { font-size: 1rem; margin-top: 2rem; color: #666; }
-    </style>
-</head>
-<body>
-    <div style="margin-top: 3in;">
-        <div class="cover-title">CLOSING BINDER</div>
-        <div class="cover-subtitle">${matterType}</div>
-        <div class="cover-info">Prepared for: ${clientName}</div>
-        <div class="cover-date">${new Date(closingDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-    </div>
-</body>
-</html>
-            `;
+            try {
+                // Show progress
+                showProgress(0);
+                document.getElementById('exportBtn').disabled = true;
+                document.getElementById('exportBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
 
-            // Create detailed TOC HTML for printing/saving
-            let tocHTML = `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Table of Contents - ${clientName} ${matterType}</title>
-    <style>
-        body { font-family: 'Times New Roman', serif; padding: 1in; }
-        .toc-title { text-align: center; font-size: 1.8rem; font-weight: bold; margin-bottom: 2rem; border-bottom: 2px solid #000; padding-bottom: 1rem; }
-        .toc-section-title { font-size: 1.2rem; font-weight: bold; margin: 1.5rem 0 0.5rem 0; border-left: 4px solid #000; padding-left: 10px; }
-        .toc-document { display: flex; justify-content: space-between; padding: 0.5rem 1rem; border-bottom: 1px dotted #ccc; }
-        .toc-footer { text-align: center; margin-top: 2rem; color: #666; font-style: italic; }
-    </style>
-</head>
-<body>
-    <div class="toc-title">TABLE OF CONTENTS</div>
-    <div style="text-align: center; margin-bottom: 2rem;">
-        <strong>${matterType}</strong><br>
-        <em>Prepared for ${clientName}</em><br>
-        ${new Date(closingDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-    </div>
-            `;
+                // Create new PDF document
+                const pdfDoc = await PDFLib.PDFDocument.create();
+                let pageNumber = 1;
 
-            let documentCount = 0;
-            sections.forEach((section, sectionIndex) => {
-                const sectionDocs = documents.filter(doc => 
-                    doc.sectionId && doc.sectionId.toString() === section.id.toString()
-                ).sort((a, b) => {
-                    if (a.orderInSection !== undefined && b.orderInSection !== undefined) {
-                        return a.orderInSection - b.orderInSection;
+                // Add custom cover page if uploaded
+                if (customCoverPage) {
+                    showProgress(10);
+                    if (customCoverPage.type === 'application/pdf') {
+                        const coverBytes = await customCoverPage.file.arrayBuffer();
+                        const coverPdf = await PDFLib.PDFDocument.load(coverBytes);
+                        const [coverPage] = await pdfDoc.copyPages(coverPdf, [0]);
+                        pdfDoc.addPage(coverPage);
+                    } else {
+                        // Handle image cover page
+                        const coverBytes = await customCoverPage.file.arrayBuffer();
+                        let coverImage;
+                        if (customCoverPage.type === 'image/jpeg' || customCoverPage.type === 'image/jpg') {
+                            coverImage = await pdfDoc.embedJpg(coverBytes);
+                        } else {
+                            coverImage = await pdfDoc.embedPng(coverBytes);
+                        }
+                        
+                        const coverPage = pdfDoc.addPage([612, 792]); // Letter size
+                        const { width, height } = coverImage.scale(1);
+                        const scale = Math.min(612 / width, 792 / height) * 0.8;
+                        
+                        coverPage.drawImage(coverImage, {
+                            x: (612 - width * scale) / 2,
+                            y: (792 - height * scale) / 2,
+                            width: width * scale,
+                            height: height * scale,
+                        });
                     }
-                    return 0;
-                });
-                
-                if (sectionDocs.length > 0) {
-                    const sectionNumber = sectionIndex + 1;
-                    tocHTML += `<div class="toc-section-title">${sectionNumber}. ${section.name}</div>`;
+                    pageNumber++;
+                } else {
+                    // Generate default cover page
+                    showProgress(10);
+                    const coverPage = pdfDoc.addPage([612, 792]);
+                    const font = await pdfDoc.embedFont(PDFLib.StandardFonts.TimesRoman);
+                    const boldFont = await pdfDoc.embedFont(PDFLib.StandardFonts.TimesRomanBold);
                     
-                    sectionDocs.forEach((doc, docIndex) => {
-                        const docNumber = `${sectionNumber}.${docIndex + 1}`;
-                        tocHTML += `
-                            <div class="toc-document">
-                                <span><strong>${docNumber}</strong> ${doc.displayName}</span>
-                                <span>Page ${(sectionIndex * 10) + docIndex + 3}</span>
-                            </div>
-                        `;
-                        documentCount++;
+                    const formattedDate = new Date(closingDate).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
                     });
-                }
-            });
 
-            tocHTML += `
-    <div class="toc-footer">
-        ${documentCount} Documents Organized • Generated ${new Date().toLocaleDateString()}
-    </div>
-</body>
-</html>
-            `;
-
-            // Create and download cover page
-            const coverBlob = new Blob([coverPageHTML], { type: 'text/html' });
-            const coverUrl = URL.createObjectURL(coverBlob);
-            const coverLink = document.createElement('a');
-            coverLink.href = coverUrl;
-            coverLink.download = `00_Cover_Page_${clientName.replace(/[^a-zA-Z0-9]/g, '_')}_${matterType.replace(/[^a-zA-Z0-9]/g, '_')}.html`;
-            coverLink.click();
-            URL.revokeObjectURL(coverUrl);
-
-            // Create and download TOC
-            const tocBlob = new Blob([tocHTML], { type: 'text/html' });
-            const tocUrl = URL.createObjectURL(tocBlob);
-            const tocLink = document.createElement('a');
-            tocLink.href = tocUrl;
-            tocLink.download = `01_Table_of_Contents_${clientName.replace(/[^a-zA-Z0-9]/g, '_')}_${matterType.replace(/[^a-zA-Z0-9]/g, '_')}.html`;
-            tocLink.click();
-            URL.revokeObjectURL(tocUrl);
-
-            // Create detailed summary text file
-            let summary = `
-PROFESSIONAL CLOSING BINDER EXPORT
-=================================
-
-CLIENT INFORMATION
-------------------
-Client Name: ${clientName}
-Matter Type: ${matterType}
-Closing Date: ${closingDate}
-Export Date: ${new Date().toLocaleString()}
-
-BINDER CONTENTS
-===============
-Total Sections: ${sections.length}
-Total Documents: ${documentCount}
-Unassigned Documents: ${documents.filter(d => !d.sectionId).length}
-
-DETAILED TABLE OF CONTENTS
-==========================
-`;
-
-            sections.forEach((section, sectionIndex) => {
-                const sectionDocs = documents.filter(doc => 
-                    doc.sectionId && doc.sectionId.toString() === section.id.toString()
-                ).sort((a, b) => {
-                    if (a.orderInSection !== undefined && b.orderInSection !== undefined) {
-                        return a.orderInSection - b.orderInSection;
-                    }
-                    return 0;
-                });
-                
-                if (sectionDocs.length > 0) {
-                    const sectionNumber = sectionIndex + 1;
-                    summary += `\n${sectionNumber}. ${section.name}\n`;
-                    summary += `   ${'-'.repeat(section.name.length + 3)}\n`;
-                    
-                    sectionDocs.forEach((doc, docIndex) => {
-                        const docNumber = `${sectionNumber}.${docIndex + 1}`;
-                        summary += `   ${docNumber} ${doc.displayName}\n`;
-                        summary += `       Original File: ${doc.name}\n`;
-                        summary += `       File Size: ${doc.size}\n`;
-                        summary += `       Export Name: ${docNumber}_${doc.displayName.replace(/[^a-zA-Z0-9.-]/g, '_')}.pdf\n\n`;
+                    coverPage.drawText('CLOSING BINDER', {
+                        x: 306,
+                        y: 500,
+                        size: 36,
+                        font: boldFont,
+                        color: PDFLib.rgb(0, 0, 0),
                     });
+
+                    coverPage.drawText(matterType, {
+                        x: 306,
+                        y: 450,
+                        size: 24,
+                        font: font,
+                        color: PDFLib.rgb(0, 0, 0),
+                    });
+
+                    coverPage.drawText(`Prepared for: ${clientName}`, {
+                        x: 306,
+                        y: 400,
+                        size: 18,
+                        font: font,
+                        color: PDFLib.rgb(0, 0, 0),
+                    });
+
+                    coverPage.drawText(formattedDate, {
+                        x: 306,
+                        y: 350,
+                        size: 14,
+                        font: font,
+                        color: PDFLib.rgb(0.4, 0.4, 0.4),
+                    });
+                    
+                    pageNumber++;
                 }
-            });
 
-            summary += `
-EXPORT PACKAGE CONTENTS
-=======================
-1. 00_Cover_Page_[ClientName]_[Matter].html - Professional cover page
-2. 01_Table_of_Contents_[ClientName]_[Matter].html - Detailed table of contents  
-3. This summary file with complete binder information
-4. All organized documents with sequential numbering
-
-PRINTING INSTRUCTIONS
-=====================
-1. Open the Cover Page HTML file in your browser and print
-2. Open the Table of Contents HTML file in your browser and print
-3. Print individual PDF documents in the order shown in the TOC
-4. Assemble in a three-ring binder with tabs for each section
-
-© Professional Closing Binder Application
-            `;
-
-            // Download summary file
-            const summaryBlob = new Blob([summary], { type: 'text/plain' });
-            const summaryUrl = URL.createObjectURL(summaryBlob);
-            const summaryLink = document.createElement('a');
-            summaryLink.href = summaryUrl;
-            summaryLink.download = `02_Binder_Summary_${clientName.replace(/[^a-zA-Z0-9]/g, '_')}_${matterType.replace(/[^a-zA-Z0-9]/g, '_')}.txt`;
-            summaryLink.click();
-            URL.revokeObjectURL(summaryUrl);
-
-            // Download all documents with proper numbering and slight delay
-            let downloadIndex = 0;
-            sections.forEach((section, sectionIndex) => {
-                const sectionDocs = documents.filter(doc => 
-                    doc.sectionId && doc.sectionId.toString() === section.id.toString()
-                ).sort((a, b) => {
-                    if (a.orderInSection !== undefined && b.orderInSection !== undefined) {
-                        return a.orderInSection - b.orderInSection;
-                    }
-                    return 0;
+                // Generate TOC page
+                showProgress(20);
+                const tocPage = pdfDoc.addPage([612, 792]);
+                const font = await pdfDoc.embedFont(PDFLib.StandardFonts.TimesRoman);
+                const boldFont = await pdfDoc.embedFont(PDFLib.StandardFonts.TimesRomanBold);
+                
+                let yPosition = 720;
+                
+                tocPage.drawText('TABLE OF CONTENTS', {
+                    x: 306,
+                    y: yPosition,
+                    size: 24,
+                    font: boldFont,
+                    color: PDFLib.rgb(0, 0, 0),
                 });
                 
-                sectionDocs.forEach((doc, docIndex) => {
-                    const sectionNumber = sectionIndex + 1;
-                    const docNumber = `${sectionNumber}.${docIndex + 1}`;
-                    
-                    setTimeout(() => {
-                        const link = document.createElement('a');
-                        link.href = doc.url;
-                        const filename = `${docNumber}_${doc.displayName.replace(/[^a-zA-Z0-9.-]/g, '_')}.pdf`;
-                        link.download = filename;
-                        link.click();
-                    }, (downloadIndex + 3) * 700); // Start after cover, TOC, and summary
-                    
-                    downloadIndex++;
+                yPosition -= 40;
+                
+                tocPage.drawText(`${matterType} - Prepared for ${clientName}`, {
+                    x: 306,
+                    y: yPosition,
+                    size: 14,
+                    font: font,
+                    color: PDFLib.rgb(0, 0, 0),
                 });
-            });
+                
+                yPosition -= 50;
+                pageNumber++;
 
-            showSuccessMessage(`Complete binder package export started! Check your downloads: Cover page, TOC, summary, and ${documentCount} documents.`);
+                // Build TOC entries with actual page numbers
+                const tocEntries = [];
+                let currentPageNum = pageNumber;
+
+                sections.forEach((section, sectionIndex) => {
+                    let sectionDocs = documents.filter(doc => 
+                        doc.sectionId && doc.sectionId.toString() === section.id.toString()
+                    );
+                    
+                    sectionDocs.sort((a, b) => {
+                        if (a.orderInSection !== undefined && b.orderInSection !== undefined) {
+                            return a.orderInSection - b.orderInSection;
+                        }
+                        return 0;
+                    });
+                    
+                    if (sectionDocs.length > 0) {
+                        const sectionNumber = sectionIndex + 1;
+                        
+                        // Add section header to TOC
+                        tocEntries.push({
+                            text: `${sectionNumber}. ${section.name}`,
+                            page: currentPageNum,
+                            isSection: true
+                        });
+                        
+                        // Add documents to TOC
+                        sectionDocs.forEach((doc, docIndex) => {
+                            const docNumber = `${sectionNumber}.${docIndex + 1}`;
+                            tocEntries.push({
+                                text: `   ${docNumber} ${doc.displayName}`,
+                                page: currentPageNum,
+                                isSection: false,
+                                doc: doc
+                            });
+                            currentPageNum++; // Each document will be on its own page
+                        });
+                    }
+                });
+
+                // Draw TOC entries
+                tocEntries.forEach(entry => {
+                    if (yPosition < 100) {
+                        // Need new page for TOC
+                        const newTocPage = pdfDoc.addPage([612, 792]);
+                        yPosition = 720;
+                        tocPage = newTocPage;
+                        pageNumber++;
+                    }
+                    
+                    const textFont = entry.isSection ? boldFont : font;
+                    const textSize = entry.isSection ? 14 : 12;
+                    
+                    tocPage.drawText(entry.text, {
+                        x: 50,
+                        y: yPosition,
+                        size: textSize,
+                        font: textFont,
+                        color: PDFLib.rgb(0, 0, 0),
+                    });
+                    
+                    tocPage.drawText(`Page ${entry.page}`, {
+                        x: 500,
+                        y: yPosition,
+                        size: textSize,
+                        font: textFont,
+                        color: PDFLib.rgb(0, 0, 0),
+                    });
+                    
+                    yPosition -= entry.isSection ? 25 : 20;
+                });
+
+                // Add documents to PDF
+                let processedDocs = 0;
+                const totalDocs = assignedDocs.length;
+
+                for (const section of sections) {
+                    let sectionDocs = documents.filter(doc => 
+                        doc.sectionId && doc.sectionId.toString() === section.id.toString()
+                    );
+                    
+                    sectionDocs.sort((a, b) => {
+                        if (a.orderInSection !== undefined && b.orderInSection !== undefined) {
+                            return a.orderInSection - b.orderInSection;
+                        }
+                        return 0;
+                    });
+
+                    for (const doc of sectionDocs) {
+                        try {
+                            const docBytes = await doc.file.arrayBuffer();
+                            const docPdf = await PDFLib.PDFDocument.load(docBytes);
+                            const docPages = await pdfDoc.copyPages(docPdf, docPdf.getPageIndices());
+                            
+                            docPages.forEach(page => {
+                                pdfDoc.addPage(page);
+                            });
+                            
+                            processedDocs++;
+                            showProgress(20 + (processedDocs / totalDocs) * 70);
+                        } catch (error) {
+                            console.error(`Error processing document ${doc.displayName}:`, error);
+                            showSuccessMessage(`Warning: Could not process ${doc.displayName}`, 'warning');
+                        }
+                    }
+                }
+
+                // Generate final PDF
+                showProgress(95);
+                const pdfBytes = await pdfDoc.save();
+                
+                // Download the PDF
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${clientName.replace(/[^a-zA-Z0-9]/g, '_')}_${matterType.replace(/[^a-zA-Z0-9]/g, '_')}_ClosingBinder.pdf`;
+                link.click();
+                
+                URL.revokeObjectURL(url);
+                showProgress(100);
+                
+                setTimeout(() => {
+                    hideProgress();
+                    showSuccessMessage(`Professional PDF binder generated successfully! ${totalDocs} documents included.`);
+                }, 500);
+
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                alert('Error generating PDF binder. Please try again.');
+                hideProgress();
+            } finally {
+                document.getElementById('exportBtn').disabled = false;
+                document.getElementById('exportBtn').innerHTML = '<i class="fas fa-file-pdf"></i> Generate PDF Binder';
+            }
+        }
+
+        function showProgress(percent) {
+            document.getElementById('progressBar').style.display = 'block';
+            document.getElementById('progressFill').style.width = percent + '%';
+        }
+
+        function hideProgress() {
+            document.getElementById('progressBar').style.display = 'none';
+            document.getElementById('progressFill').style.width = '0%';
         }
 
         function formatFileSize(bytes) {
@@ -1610,25 +1719,4 @@ PRINTING INSTRUCTIONS
             const k = 1024;
             const sizes = ['Bytes', 'KB', 'MB', 'GB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-
-        function showSuccessMessage(message) {
-            const messageEl = document.getElementById('successMessage');
-            const textEl = document.getElementById('successText');
-            textEl.textContent = message;
-            messageEl.style.display = 'block';
-            setTimeout(() => {
-                messageEl.style.display = 'none';
-            }, 3000);
-        }
-
-        // Handle Enter key in add section form
-        document.getElementById('newSectionName').addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-                addSection();
-            }
-        });
-    </script>
-</body>
-</html>
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' +
