@@ -819,8 +819,7 @@
         function addSectionToData(name) {
             const section = {
                 id: Date.now() + Math.random(),
-                name: name,
-                documents: []
+                name: name
             };
             sections.push(section);
             return section;
@@ -919,25 +918,15 @@
             if (draggedDocument) {
                 const doc = documents.find(d => d.id === draggedDocument);
                 if (doc) {
-                    // Remove from previous section if it was assigned
-                    if (doc.sectionId) {
-                        const prevSection = sections.find(s => s.id === doc.sectionId);
-                        if (prevSection) {
-                            prevSection.documents = prevSection.documents.filter(d => d.id !== doc.id);
-                        }
-                    }
-                    
-                    // Assign to new section
+                    console.log('Moving document:', doc.displayName, 'to section:', sectionId);
                     doc.sectionId = sectionId;
-                    const newSection = sections.find(s => s.id === sectionId);
-                    if (newSection && !newSection.documents.find(d => d.id === doc.id)) {
-                        newSection.documents.push(doc);
-                    }
                     
-                    // Update all displays
-                    updateUnassignedDocuments();
-                    updateSectionsDisplay();
-                    showSuccessMessage('Document moved to section successfully!');
+                    // Force update displays
+                    setTimeout(() => {
+                        updateUnassignedDocuments();
+                        updateSectionsDisplay();
+                        showSuccessMessage(`Document "${doc.displayName}" moved to section successfully!`);
+                    }, 100);
                 }
             }
             draggedDocument = null;
@@ -946,15 +935,7 @@
         function moveDocumentToUnassigned(docId) {
             const doc = documents.find(d => d.id === docId);
             if (doc) {
-                // Remove from current section
-                if (doc.sectionId) {
-                    const section = sections.find(s => s.id === doc.sectionId);
-                    if (section) {
-                        section.documents = section.documents.filter(d => d.id !== doc.id);
-                    }
-                }
-                
-                // Move to unassigned
+                console.log('Moving document back to unassigned:', doc.displayName);
                 doc.sectionId = null;
                 updateUnassignedDocuments();
                 updateSectionsDisplay();
@@ -1007,14 +988,17 @@
 
         function removeSection(sectionId) {
             if (confirm('Are you sure you want to remove this section? Documents will be moved to unassigned.')) {
-                // Move documents back to unassigned
+                // Find the section
+                const section = sections.find(s => s.id === sectionId);
+                
+                // Move all documents in this section back to unassigned
                 documents.forEach(doc => {
                     if (doc.sectionId === sectionId) {
                         doc.sectionId = null;
                     }
                 });
                 
-                // Remove section
+                // Remove section from sections array
                 sections = sections.filter(s => s.id !== sectionId);
                 
                 updateUnassignedDocuments();
