@@ -808,26 +808,29 @@
 
         function handleDocumentDragStart(event, docId) {
             draggedDocument = docId;
-            event.target.classList.add('dragging');
             console.log('Started dragging document ID:', docId);
             
+            // Safely add dragging class
+            if (event && event.target && event.target.classList) {
+                event.target.classList.add('dragging');
+            }
+            
             // Set drag data
-            event.dataTransfer.setData('text/plain', docId);
-            event.dataTransfer.effectAllowed = 'move';
+            if (event && event.dataTransfer) {
+                event.dataTransfer.setData('text/plain', docId);
+                event.dataTransfer.effectAllowed = 'move';
+            }
         }
 
         function handleDocumentDragEnd(event) {
-            console.log('Ended dragging document');
+            console.log('Drag end event triggered');
             
-            // Safely remove dragging class
-            if (event && event.target && event.target.classList) {
-                event.target.classList.remove('dragging');
-            }
-            
-            // Also remove from any elements that might have the class
+            // Clean up all dragging classes - safer approach
             document.querySelectorAll('.dragging').forEach(el => {
                 el.classList.remove('dragging');
             });
+            
+            draggedDocument = null;
         }
 
         function addSectionToData(name) {
