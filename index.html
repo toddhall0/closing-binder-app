@@ -868,12 +868,12 @@
                          ondragleave="handleSectionDragLeave(event)"
                          ondrop="handleSectionDrop(event, '${section.id}')">
                         <div class="section-header">
-                            <div class="section-title" ${isEditing ? '' : `ondblclick="startSectionRename('${section.id}')"`}>
+                            <div class="section-title" ${isEditing ? '' : `ondblclick="startSectionRename('${section.id}'); event.stopPropagation();" title="Double-click to rename"`}>
                                 ${isEditing ? 
                                     `<input type="text" class="section-title-input" value="${section.name}" 
                                      onblur="finishSectionRename('${section.id}', this.value)" 
                                      onkeypress="handleSectionRenameKeypress(event, '${section.id}', this.value)" 
-                                     autofocus>` : 
+                                     onclick="event.stopPropagation();" autofocus>` : 
                                     section.name
                                 }
                             </div>
@@ -890,8 +890,17 @@
                         <div class="section-content">
                 `;
 
-                // Fix: Convert both IDs to strings for comparison
-                const sectionDocs = documents.filter(doc => doc.sectionId && doc.sectionId.toString() === section.id.toString());
+                // Fix: Convert both IDs to strings for comparison and sort by order
+                let sectionDocs = documents.filter(doc => doc.sectionId && doc.sectionId.toString() === section.id.toString());
+                
+                // Sort by orderInSection if it exists, otherwise maintain original order
+                sectionDocs.sort((a, b) => {
+                    if (a.orderInSection !== undefined && b.orderInSection !== undefined) {
+                        return a.orderInSection - b.orderInSection;
+                    }
+                    return 0;
+                });
+                
                 console.log(`Section ${section.name} (ID: ${section.id}) has ${sectionDocs.length} documents:`, sectionDocs.map(d => d.displayName));
                 
                 if (sectionDocs.length === 0) {
@@ -914,11 +923,13 @@
                                  ondragstart="handleSectionDocumentDragStart(event, ${doc.id})"
                                  ondragend="handleDocumentDragEnd(event)"
                                  ondragover="handleDocumentDragOver(event, ${doc.id})"
+                                 ondragleave="handleDocumentDragLeave(event)"
                                  ondrop="handleDocumentReorder(event, ${doc.id})"
-                                 onclick="selectDocument(${doc.id})">
+                                 onclick="selectDocument(${doc.id})"
+                                 style="cursor: grab;">
                                 <div class="doc-number">${docNumber}</div>
                                 <div class="document-info">
-                                    <div class="document-name" ${isEditingDoc ? '' : `ondblclick="startRename(${doc.id}); event.stopPropagation();"`}>
+                                    <div class="document-name" ${isEditingDoc ? '' : `ondblclick="startRename(${doc.id}); event.stopPropagation();" title="Double-click to rename"`}>
                                         ${isEditingDoc ? 
                                             `<input type="text" class="document-name-input" value="${doc.displayName}" 
                                              onblur="finishRename(${doc.id}, this.value)" 
@@ -927,7 +938,7 @@
                                             doc.displayName
                                         }
                                     </div>
-                                    <div class="document-size">${doc.size} • Double-click name to rename</div>
+                                    <div class="document-size">${doc.size} • Drag to reorder, double-click name to rename</div>
                                 </div>
                                 <div class="document-actions">
                                     <button class="btn-small btn-download" onclick="downloadDocument(${doc.id}); event.stopPropagation();" title="Download">
@@ -1172,26 +1183,47 @@
             draggedDocument = null;
         }
 
+        function handleDocumentDragLeave(event) {
+            event.currentTarget.classList.remove('drag-over');
+        }
+
         function reorderDocumentsInSection(draggedDoc, targetDoc) {
+            console.log('Reordering:', draggedDoc.displayName, 'relative to', targetDoc.displayName);
+            
+            // Get all documents in this section, sorted by their current order
             const sectionDocs = documents.filter(doc => 
                 doc.sectionId && doc.sectionId.toString() === draggedDoc.sectionId.toString()
             );
             
-            const draggedIndex = sectionDocs.findIndex(doc => doc.id === draggedDoc.id);
-            const targetIndex = sectionDocs.findIndex(doc => doc.id === targetDoc.id);
+            console.log('Section has', sectionDocs.length, 'documents before reorder');
             
-            if (draggedIndex !== -1 && targetIndex !== -1) {
-                // Remove dragged document from its current position
-                sectionDocs.splice(draggedIndex, 1);
+            // Find current positions
+            const draggedIndex = sectionDocs.findIndex(doc => doc.id == draggedDoc.id);
+            const targetIndex = sectionDocs.findIndex(doc => doc.id == targetDoc.id);
+            
+            console.log('Dragged index:', draggedIndex, 'Target index:', targetIndex);
+            
+            if (draggedIndex !== -1 && targetIndex !== -1 && draggedIndex !== targetIndex) {
+                // Remove dragged document
+                const [removed] = sectionDocs.splice(draggedIndex, 1);
                 
-                // Insert it at the target position
-                const newTargetIndex = draggedIndex < targetIndex ? targetIndex - 1 : targetIndex;
-                sectionDocs.splice(newTargetIndex, 0, draggedDoc);
+                // Calculate new insertion point
+                const newIndex = draggedIndex < targetIndex ? targetIndex - 1 : targetIndex;
                 
-                // Update the global documents array to reflect new order
+                // Insert at new position
+                sectionDocs.splice(newIndex, 0, removed);
+                
+                console.log('New order:', sectionDocs.map(d => d.displayName));
+                
+                // Update the main documents array
                 const otherDocs = documents.filter(doc => 
                     !doc.sectionId || doc.sectionId.toString() !== draggedDoc.sectionId.toString()
                 );
+                
+                // Add order property to maintain sequence
+                sectionDocs.forEach((doc, index) => {
+                    doc.orderInSection = index;
+                });
                 
                 documents = [...otherDocs, ...sectionDocs];
                 
