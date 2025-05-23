@@ -875,9 +875,9 @@
                         <div class="section-content">
                 `;
 
-                // Get documents for this section - this is the key fix
-                const sectionDocs = documents.filter(doc => doc.sectionId === section.id);
-                console.log(`Section ${section.name} has ${sectionDocs.length} documents:`, sectionDocs.map(d => d.displayName));
+                // Fix: Convert both IDs to strings for comparison
+                const sectionDocs = documents.filter(doc => doc.sectionId && doc.sectionId.toString() === section.id.toString());
+                console.log(`Section ${section.name} (ID: ${section.id}) has ${sectionDocs.length} documents:`, sectionDocs.map(d => d.displayName));
                 
                 if (sectionDocs.length === 0) {
                     html += `
