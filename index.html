@@ -387,6 +387,7 @@
             background: white;
             cursor: pointer;
             transition: all 0.2s ease;
+            margin-bottom: 8px;
         }
 
         .section-document:hover {
@@ -398,6 +399,17 @@
             background: #007bff;
             color: white;
             border-color: #007bff;
+        }
+
+        .section-document.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+            transform: rotate(2deg);
+        }
+
+        .section-document.drag-over {
+            border-top: 3px solid #007bff;
+            margin-top: 8px;
         }
 
         .doc-number {
@@ -1076,6 +1088,7 @@
             const doc = documents.find(d => d.id === docId);
             if (doc && newName.trim()) {
                 doc.displayName = newName.trim();
+                showSuccessMessage(`Document renamed to "${doc.displayName}"`);
             }
             editingDocument = null;
             updateUnassignedDocuments();
@@ -1092,6 +1105,100 @@
             }
         }
 
+        // New function for handling drag and drop reordering within sections
+        function handleSectionDocumentDragStart(event, docId) {
+            draggedDocument = docId;
+            console.log('Started dragging section document ID:', docId);
+            
+            // Safely add dragging class
+            if (event && event.target && event.target.classList) {
+                event.target.classList.add('dragging');
+            }
+            
+            // Set drag data
+            if (event && event.dataTransfer) {
+                event.dataTransfer.setData('text/plain', docId);
+                event.dataTransfer.effectAllowed = 'move';
+            }
+        }
+
+        function handleDocumentDragOver(event, targetDocId) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.dataTransfer.dropEffect = 'move';
+            
+            // Don't highlight if dragging over self
+            if (draggedDocument && draggedDocument != targetDocId) {
+                event.currentTarget.classList.add('drag-over');
+                console.log('Dragging over document:', targetDocId);
+            }
+        }
+
+        function handleDocumentReorder(event, targetDocId) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Remove drag-over class from all elements
+            document.querySelectorAll('.drag-over').forEach(el => {
+                el.classList.remove('drag-over');
+            });
+            
+            const draggedDocId = event.dataTransfer.getData('text/plain') || draggedDocument;
+            console.log('Attempting to reorder:', draggedDocId, 'near', targetDocId);
+            
+            if (draggedDocId && draggedDocId != targetDocId) {
+                const draggedDoc = documents.find(d => d.id == draggedDocId);
+                const targetDoc = documents.find(d => d.id == targetDocId);
+                
+                console.log('Found docs:', draggedDoc ? draggedDoc.displayName : 'none', targetDoc ? targetDoc.displayName : 'none');
+                
+                if (draggedDoc && targetDoc) {
+                    // If both docs are in the same section, reorder them
+                    if (draggedDoc.sectionId === targetDoc.sectionId) {
+                        console.log('Reordering within same section');
+                        reorderDocumentsInSection(draggedDoc, targetDoc);
+                    } else {
+                        // Move to different section
+                        console.log('Moving to different section');
+                        draggedDoc.sectionId = targetDoc.sectionId;
+                        showSuccessMessage(`"${draggedDoc.displayName}" moved to new section`);
+                    }
+                    
+                    updateUnassignedDocuments();
+                    updateSectionsDisplay();
+                }
+            }
+            
+            draggedDocument = null;
+        }
+
+        function reorderDocumentsInSection(draggedDoc, targetDoc) {
+            const sectionDocs = documents.filter(doc => 
+                doc.sectionId && doc.sectionId.toString() === draggedDoc.sectionId.toString()
+            );
+            
+            const draggedIndex = sectionDocs.findIndex(doc => doc.id === draggedDoc.id);
+            const targetIndex = sectionDocs.findIndex(doc => doc.id === targetDoc.id);
+            
+            if (draggedIndex !== -1 && targetIndex !== -1) {
+                // Remove dragged document from its current position
+                sectionDocs.splice(draggedIndex, 1);
+                
+                // Insert it at the target position
+                const newTargetIndex = draggedIndex < targetIndex ? targetIndex - 1 : targetIndex;
+                sectionDocs.splice(newTargetIndex, 0, draggedDoc);
+                
+                // Update the global documents array to reflect new order
+                const otherDocs = documents.filter(doc => 
+                    !doc.sectionId || doc.sectionId.toString() !== draggedDoc.sectionId.toString()
+                );
+                
+                documents = [...otherDocs, ...sectionDocs];
+                
+                showSuccessMessage(`"${draggedDoc.displayName}" reordered within section`);
+            }
+        }
+
         function startSectionRename(sectionId) {
             editingSection = sectionId;
             updateSectionsDisplay();
@@ -1101,6 +1208,7 @@
             const section = sections.find(s => s.id === sectionId);
             if (section && newName.trim()) {
                 section.name = newName.trim();
+                showSuccessMessage(`Section renamed to "${section.name}"`);
             }
             editingSection = null;
             updateSectionsDisplay();
