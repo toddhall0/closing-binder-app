@@ -948,7 +948,13 @@
                 const doc = documents.find(d => d.id == docId); // Use == to handle string/number conversion
                 if (doc) {
                     console.log('Found document:', doc.displayName, 'moving to section');
+                    console.log('Before assignment - doc.sectionId:', doc.sectionId);
+                    
                     doc.sectionId = sectionId;
+                    
+                    console.log('After assignment - doc.sectionId:', doc.sectionId);
+                    console.log('Target section ID:', sectionId);
+                    console.log('All documents with their sectionIds:', documents.map(d => ({name: d.displayName, sectionId: d.sectionId})));
                     
                     // Immediately update displays
                     updateUnassignedDocuments();
