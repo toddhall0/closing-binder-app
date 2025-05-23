@@ -860,7 +860,7 @@
 
             sections.forEach((section, sectionIndex) => {
                 const sectionNumber = sectionIndex + 1;
-                const isEditing = editingSection === section.id;
+                const isEditing = editingSection && editingSection.toString() === section.id.toString();
                 
                 html += `
                     <div class="section" 
@@ -879,7 +879,7 @@
                             </div>
                             <div class="section-controls">
                                 <div class="section-number">${sectionNumber}</div>
-                                <button class="btn-small" onclick="startSectionRename('${section.id}')" title="Rename Section" style="background: #17a2b8; color: white; margin-right: 5px;">
+                                <button class="btn-small" onclick="startSectionRename('${section.id}'); event.stopPropagation();" title="Rename Section" style="background: #17a2b8; color: white; margin-right: 5px;">
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 <button class="btn-small btn-remove" onclick="removeSection('${section.id}')" title="Remove Section">
@@ -1188,68 +1188,92 @@
         }
 
         function reorderDocumentsInSection(draggedDoc, targetDoc) {
+            console.log('=== REORDER START ===');
             console.log('Reordering:', draggedDoc.displayName, 'relative to', targetDoc.displayName);
+            console.log('Section ID:', draggedDoc.sectionId);
             
-            // Get all documents in this section, sorted by their current order
-            const sectionDocs = documents.filter(doc => 
+            // Get all documents in this section
+            let sectionDocs = documents.filter(doc => 
                 doc.sectionId && doc.sectionId.toString() === draggedDoc.sectionId.toString()
             );
             
-            console.log('Section has', sectionDocs.length, 'documents before reorder');
+            console.log('Documents in section BEFORE reorder:', sectionDocs.map(d => d.displayName));
             
             // Find current positions
-            const draggedIndex = sectionDocs.findIndex(doc => doc.id == draggedDoc.id);
-            const targetIndex = sectionDocs.findIndex(doc => doc.id == targetDoc.id);
+            const draggedIndex = sectionDocs.findIndex(doc => doc.id.toString() === draggedDoc.id.toString());
+            const targetIndex = sectionDocs.findIndex(doc => doc.id.toString() === targetDoc.id.toString());
             
             console.log('Dragged index:', draggedIndex, 'Target index:', targetIndex);
             
             if (draggedIndex !== -1 && targetIndex !== -1 && draggedIndex !== targetIndex) {
-                // Remove dragged document
-                const [removed] = sectionDocs.splice(draggedIndex, 1);
+                // Create a new array with the reordered documents
+                const newOrder = [...sectionDocs];
                 
-                // Calculate new insertion point
-                const newIndex = draggedIndex < targetIndex ? targetIndex - 1 : targetIndex;
+                // Remove the dragged document
+                const [draggedElement] = newOrder.splice(draggedIndex, 1);
                 
-                // Insert at new position
-                sectionDocs.splice(newIndex, 0, removed);
+                // Insert it at the target position
+                newOrder.splice(targetIndex, 0, draggedElement);
                 
-                console.log('New order:', sectionDocs.map(d => d.displayName));
+                console.log('Documents in section AFTER reorder:', newOrder.map(d => d.displayName));
                 
-                // Update the main documents array
-                const otherDocs = documents.filter(doc => 
-                    !doc.sectionId || doc.sectionId.toString() !== draggedDoc.sectionId.toString()
-                );
-                
-                // Add order property to maintain sequence
-                sectionDocs.forEach((doc, index) => {
+                // Update the order property for all documents in this section
+                newOrder.forEach((doc, index) => {
                     doc.orderInSection = index;
+                    console.log(`Setting ${doc.displayName} order to ${index}`);
                 });
                 
-                documents = [...otherDocs, ...sectionDocs];
-                
-                showSuccessMessage(`"${draggedDoc.displayName}" reordered within section`);
+                showSuccessMessage(`"${draggedDoc.displayName}" moved within section`);
+                console.log('=== REORDER COMPLETE ===');
+            } else {
+                console.log('Reorder failed - invalid indices or same position');
             }
         }
 
         function startSectionRename(sectionId) {
+            console.log('=== SECTION RENAME START ===');
+            console.log('Starting section rename for ID:', sectionId);
+            console.log('Current editingSection:', editingSection);
+            console.log('All sections:', sections.map(s => ({id: s.id, name: s.name})));
+            
             editingSection = sectionId;
+            console.log('Set editingSection to:', editingSection);
             updateSectionsDisplay();
         }
 
         function finishSectionRename(sectionId, newName) {
-            const section = sections.find(s => s.id === sectionId);
+            console.log('=== SECTION RENAME FINISH ===');
+            console.log('Finishing section rename for ID:', sectionId, 'new name:', newName);
+            console.log('Looking for section with ID:', sectionId);
+            
+            const section = sections.find(s => {
+                console.log('Comparing section ID', s.id, 'with target', sectionId, 'match:', s.id.toString() === sectionId.toString());
+                return s.id.toString() === sectionId.toString();
+            });
+            
+            console.log('Found section:', section ? section.name : 'NOT FOUND');
+            
             if (section && newName.trim()) {
+                const oldName = section.name;
                 section.name = newName.trim();
+                console.log('Renamed section from:', oldName, 'to:', section.name);
                 showSuccessMessage(`Section renamed to "${section.name}"`);
+            } else {
+                console.log('Rename failed - section not found or empty name');
             }
+            
             editingSection = null;
+            console.log('Reset editingSection to null');
             updateSectionsDisplay();
         }
 
         function handleSectionRenameKeypress(event, sectionId, newName) {
+            console.log('Section rename keypress:', event.key, 'for section:', sectionId);
             if (event.key === 'Enter') {
+                console.log('Enter key pressed - finishing rename');
                 finishSectionRename(sectionId, newName);
             } else if (event.key === 'Escape') {
+                console.log('Escape key pressed - canceling rename');
                 editingSection = null;
                 updateSectionsDisplay();
             }
