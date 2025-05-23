@@ -817,8 +817,17 @@
         }
 
         function handleDocumentDragEnd(event) {
-            event.target.classList.remove('dragging');
             console.log('Ended dragging document');
+            
+            // Safely remove dragging class
+            if (event && event.target && event.target.classList) {
+                event.target.classList.remove('dragging');
+            }
+            
+            // Also remove from any elements that might have the class
+            document.querySelectorAll('.dragging').forEach(el => {
+                el.classList.remove('dragging');
+            });
         }
 
         function addSectionToData(name) {
