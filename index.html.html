@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Closing Binder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .main-content {
+            display: flex;
+            min-height: 700px;
+        }
+
+        .sidebar {
+            width: 350px;
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            padding: 30px;
+            overflow-y: auto;
+            max-height: 700px;
+        }
+
+        .client-info {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 10px;
+        }
+
+        .info-label {
+            font-weight: 500;
+            width: 100px;
+            color: #495057;
+            font-size: 14px;
+        }
+
+        .info-input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .upload-zone {
+            border: 3px dashed #6c757d;
+            border-radius: 10px;
+            padding: 30px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: white;
+        }
+
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: #007bff;
+            background: #f0f8ff;
+            transform: translateY(-2px);
+        }
+
+        .upload-zone i {
+            font-size: 2.5rem;
+            color: #6c757d;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .upload-zone.dragover i {
+            color: #007bff;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .unassigned-docs {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+            min-height: 100px;
+        }
+
+        .unassigned-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .document-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            cursor: grab;
+            transition: all 0.2s ease;
+        }
+
+        .document-item:hover {
+            background: #e9ecef;
+            transform: translateY(-1px);
+        }
+
+        .document-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+            transform: rotate(3deg);
+        }
+
+        .document-icon {
+            width: 30px;
+            height: 30px;
+            background: #dc3545;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 10px;
+            font-size: 10px;
+        }
+
+        .document-info {
+            flex: 1;
+        }
+
+        .document-name {
+            font-weight: 500;
+            margin-bottom: 2px;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 3px;
+            transition: background-color 0.2s;
+        }
+
+        .document-name:hover {
+            background-color: rgba(255,255,255,0.8);
+        }
+
+        .document-name-input {
+            width: 100%;
+            border: none;
+            background: white;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .document-size {
+            font-size: 11px;
+            opacity: 0.7;
+        }
+
+        .document-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn-small {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-download {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-download:hover {
+            background: #218838;
+        }
+
+        .btn-remove {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-remove:hover {
+            background: #c82333;
+        }
+
+        .sections-area {
+            flex: 1;
+            padding: 30px;
+            background: white;
+            overflow-y: auto;
+            max-height: 700px;
+        }
+
+        .sections-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .sections-title {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            font-weight: 300;
+        }
+
+        .section-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,123,255,0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .section.drag-over {
+            border-color: #007bff;
+            background: #f0f8ff;
+            transform: scale(1.02);
+        }
+
+        .section-header {
+            padding: 20px;
+            background: #e9ecef;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2c3e50;
+            cursor: pointer;
+        }
+
+        .section-title-input {
+            font-size: 1.2rem;
+            font-weight: 600;
+            border: none;
+            background: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            color: #2c3e50;
+        }
+
+        .section-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .section-number {
+            background: #007bff;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .section-content {
+            padding: 20px;
+            min-height: 80px;
+            background: white;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .section-documents {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .section-document {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .section-document:hover {
+            background: #f8f9fa;
+            transform: translateX(5px);
+        }
+
+        .section-document.selected {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .doc-number {
+            font-weight: bold;
+            color: #007bff;
+            margin-right: 15px;
+            min-width: 40px;
+        }
+
+        .section-document.selected .doc-number {
+            color: white;
+        }
+
+        .empty-section {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 30px;
+            border: 2px dashed #dee2e6;
+            border-radius: 6px;
+        }
+
+        .add-section-form {
+            background: #e3f2fd;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+            display: none;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .form-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .preview-area {
+            flex: 1;
+            padding: 30px;
+            background: white;
+            border-left: 1px solid #e9ecef;
+            overflow-y: auto;
+            max-height: 700px;
+        }
+
+        .preview-header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .preview-title {
+            font-size: 1.5rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .preview-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .pdf-viewer {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pdf-embed {
+            width: 100%;
+            height: 500px;
+            border: none;
+            border-radius: 8px;
+        }
+
+        .toc-preview {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+
+        .toc-title {
+            text-align: center;
+            font-size: 1.8rem;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 15px;
+        }
+
+        .toc-section {
+            margin-bottom: 25px;
+        }
+
+        .toc-section-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+        }
+
+        .toc-document {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 20px;
+            border-bottom: 1px dotted #ccc;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .sidebar, .sections-area, .preview-area {
+                width: 100%;
+                max-height: none;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-folder-open"></i> Professional Closing Binder</h1>
+            <p>Organize documents into professional sections with drag-and-drop functionality</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="client-info">
+                    <h3 style="margin-bottom: 15px; color: #2c3e50;">Client Information</h3>
+                    <div class="info-row">
+                        <label class="info-label">Client:</label>
+                        <input type="text" class="info-input" id="clientName" placeholder="Enter client name">
+                    </div>
+                    <div class="info-row">
+                        <label class="info-label">Matter:</label>
+                        <input type="text" class="info-input" id="matterType" placeholder="e.g., Real Estate Closing">
+                    </div>
+                    <div class="info-row">
+                        <label class="info-label">Date:</label>
+                        <input type="date" class="info-input" id="closingDate">
+                    </div>
+                </div>
+
+                <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h4>Drop PDF Files Here</h4>
+                    <p>or click to browse</p>
+                </div>
+                <input type="file" id="fileInput" class="file-input" accept=".pdf" multiple>
+
+                <div class="unassigned-docs" id="unassignedDocs">
+                    <div class="unassigned-title">
+                        <i class="fas fa-inbox"></i>
+                        Unassigned Documents (<span id="unassignedCount">0</span>)
+                    </div>
+                    <div id="unassignedList">
+                        <div style="text-align: center; color: #6c757d; padding: 20px; font-style: italic;">
+                            Upload PDFs and drag them into sections
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sections Area -->
+            <div class="sections-area">
+                <div class="success-message" id="successMessage">
+                    <i class="fas fa-check-circle"></i> <span id="successText">Action completed successfully!</span>
+                </div>
+
+                <div class="sections-header">
+                    <h2 class="sections-title">Document Sections</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-success" onclick="showAddSectionForm()">
+                            <i class="fas fa-plus"></i> Add Section
+                        </button>
+                        <button class="btn btn-secondary" onclick="generateTOC()">
+                            <i class="fas fa-list"></i> Preview TOC
+                        </button>
+                        <button class="btn btn-primary" onclick="exportBinder()">
+                            <i class="fas fa-download"></i> Export Binder
+                        </button>
+                    </div>
+                </div>
+
+                <div class="add-section-form" id="addSectionForm">
+                    <h4 style="margin-bottom: 15px; color: #1976d2;">Add New Section</h4>
+                    <div class="form-row">
+                        <input type="text" class="form-input" id="newSectionName" placeholder="Section name (e.g., Transaction Documents)">
+                        <button class="btn btn-primary" onclick="addSection()">Add</button>
+                        <button class="btn btn-secondary" onclick="hideAddSectionForm()">Cancel</button>
+                    </div>
+                </div>
+
+                <div id="sectionsContainer">
+                    <!-- Sections will be dynamically added here -->
+                </div>
+            </div>
+
+            <!-- Preview Area -->
+            <div class="preview-area">
+                <div class="preview-header">
+                    <div class="preview-title">Document Preview</div>
+                    <div class="preview-controls">
+                        <button class="btn btn-small btn-secondary" onclick="showDocumentView()">Document</button>
+                        <button class="btn btn-small btn-secondary" onclick="showTOCView()">TOC</button>
+                    </div>
+                </div>
+
+                <div id="documentPreview" class="pdf-viewer">
+                    <div style="color: #6c757d;">
+                        <i class="fas fa-eye" style="font-size: 3rem; margin-bottom: 15px; display: block;"></i>
+                        Select a document to preview
+                    </div>
+                </div>
+
+                <div id="tocPreview" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let documents = [];
+        let sections = [];
+        let currentDocument = null;
+        let editingDocument = null;
+        let editingSection = null;
+        let draggedDocument = null;
+
+        // Initialize with default sections
+        const defaultSections = [
+            "Transaction Documents",
+            "Due Diligence Documents", 
+            "Closing Documents"
+        ];
+
+        // Set today's date as default
+        document.getElementById('closingDate').valueAsDate = new Date();
+
+        // Initialize app
+        initializeApp();
+
+        function initializeApp() {
+            // Add default sections
+            defaultSections.forEach(sectionName => {
+                addSectionToData(sectionName);
+            });
+            updateSectionsDisplay();
+            setupEventListeners();
+        }
+
+        function setupEventListeners() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadZone = document.querySelector('.upload-zone');
+
+            fileInput.addEventListener('change', handleFiles);
+
+            // Drag and drop for file upload
+            uploadZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadZone.classList.add('dragover');
+            });
+
+            uploadZone.addEventListener('dragleave', () => {
+                uploadZone.classList.remove('dragover');
+            });
+
+            uploadZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadZone.classList.remove('dragover');
+                const files = Array.from(e.dataTransfer.files).filter(file => file.type === 'application/pdf');
+                addDocuments(files);
+            });
+        }
+
+        function handleFiles(e) {
+            const files = Array.from(e.target.files);
+            addDocuments(files);
+        }
+
+        function addDocuments(files) {
+            files.forEach(file => {
+                if (file.type === 'application/pdf') {
+                    const doc = {
+                        id: Date.now() + Math.random(),
+                        name: file.name,
+                        displayName: file.name.replace('.pdf', ''),
+                        size: formatFileSize(file.size),
+                        file: file,
+                        url: URL.createObjectURL(file),
+                        sectionId: null // Unassigned initially
+                    };
+                    documents.push(doc);
+                }
+            });
+            updateUnassignedDocuments();
+            showSuccessMessage('Documents uploaded successfully!');
+        }
+
+        function updateUnassignedDocuments() {
+            const unassignedDocs = documents.filter(doc => !doc.sectionId);
+            const unassignedList = document.getElementById('unassignedList');
+            const unassignedCount = document.getElementById('unassignedCount');
+            
+            unassignedCount.textContent = unassignedDocs.length;
+
+            if (unassignedDocs.length === 0) {
+                unassignedList.innerHTML = `
+                    <div style="text-align: center; color: #6c757d; padding: 20px; font-style: italic;">
+                        All documents have been assigned to sections
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            unassignedDocs.forEach(doc => {
+                const isEditing = editingDocument === doc.id;
+                html += `
+                    <div class="document-item" draggable="true" 
+                         ondragstart="handleDocumentDragStart(event, ${doc.id})"
+                         ondragend="handleDocumentDragEnd(event)">
+                        <div class="document-icon">PDF</div>
+                        <div class="document-info">
+                            <div class="document-name" ${isEditing ? '' : `ondblclick="startRename(${doc.id}); event.stopPropagation();"`}>
+                                ${isEditing ? 
+                                    `<input type="text" class="document-name-input" value="${doc.displayName}" 
+                                     onblur="finishRename(${doc.id}, this.value)" 
+                                     onkeypress="handleRenameKeypress(event, ${doc.id}, this.value)" 
+                                     onclick="event.stopPropagation();" autofocus>` : 
+                                    doc.displayName
+                                }
+                            </div>
+                            <div class="document-size">${doc.size}</div>
+                        </div>
+                        <div class="document-actions">
+                            <button class="btn-small btn-download" onclick="downloadDocument(${doc.id}); event.stopPropagation();" title="Download">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <button class="btn-small btn-remove" onclick="removeDocument(${doc.id}); event.stopPropagation();" title="Remove">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            unassignedList.innerHTML = html;
+        }
+
+        function handleDocumentDragStart(event, docId) {
+            draggedDocument = docId;
+            event.target.classList.add('dragging');
+        }
+
+        function handleDocumentDragEnd(event) {
+            event.target.classList.remove('dragging');
+            draggedDocument = null;
+        }
+
+        function addSectionToData(name) {
+            const section = {
+                id: Date.now() + Math.random(),
+                name: name,
+                documents: []
+            };
+            sections.push(section);
+            return section;
+        }
+
+        function updateSectionsDisplay() {
+            const container = document.getElementById('sectionsContainer');
+            let html = '';
+
+            sections.forEach((section, sectionIndex) => {
+                const sectionNumber = sectionIndex + 1;
+                const isEditing = editingSection === section.id;
+                
+                html += `
+                    <div class="section" 
+                         ondragover="handleSectionDragOver(event, '${section.id}')"
+                         ondragleave="handleSectionDragLeave(event)"
+                         ondrop="handleSectionDrop(event, '${section.id}')">
+                        <div class="section-header">
+                            <div class="section-title" ${isEditing ? '' : `ondblclick="startSectionRename('${section.id}')"`}>
+                                ${isEditing ? 
+                                    `<input type="text" class="section-title-input" value="${section.name}" 
+                                     onblur="finishSectionRename('${section.id}', this.value)" 
+                                     onkeypress="handleSectionRenameKeypress(event, '${section.id}', this.value)" 
+                                     autofocus>` : 
+                                    section.name
+                                }
+                            </div>
+                            <div class="section-controls">
+                                <div class="section-number">${sectionNumber}</div>
+                                <button class="btn-small btn-remove" onclick="removeSection('${section.id}')" title="Remove Section">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="section-content">
+                `;
+
+                const sectionDocs = documents.filter(doc => doc.sectionId === section.id);
+                
+                if (sectionDocs.length === 0) {
+                    html += `
+                        <div class="empty-section">
+                            <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                            Drag documents here to organize them
+                        </div>
+                    `;
+                } else {
+                    html += '<div class="section-documents">';
+                    sectionDocs.forEach((doc, docIndex) => {
+                        const docNumber = `${sectionNumber}.${docIndex + 1}`;
+                        html += `
+                            <div class="section-document ${currentDocument && currentDocument.id === doc.id ? 'selected' : ''}" 
+                                 onclick="selectDocument(${doc.id})">
+                                <div class="doc-number">${docNumber}</div>
+                                <div class="document-info">
+                                    <div class="document-name">${doc.displayName}</div>
+                                    <div class="document-size">${doc.size}</div>
+                                </div>
+                                <div class="document-actions">
+                                    <button class="btn-small btn-download" onclick="downloadDocument(${doc.id}); event.stopPropagation();" title="Download">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                    <button class="btn-small" onclick="moveDocumentToUnassigned(${doc.id}); event.stopPropagation();" title="Move to Unassigned" style="background: #ffc107; color: #212529;">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                }
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function handleSectionDragOver(event, sectionId) {
+            event.preventDefault();
+            event.currentTarget.classList.add('drag-over');
+        }
+
+        function handleSectionDragLeave(event) {
+            event.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleSectionDrop(event, sectionId) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('drag-over');
+            
+            if (draggedDocument) {
+                const doc = documents.find(d => d.id === draggedDocument);
+                if (doc) {
+                    doc.sectionId = sectionId;
+                    updateUnassignedDocuments();
+                    updateSectionsDisplay();
+                    showSuccessMessage('Document moved to section successfully!');
+                }
+            }
+        }
+
+        function moveDocumentToUnassigned(docId) {
+            const doc = documents.find(d => d.id === docId);
+            if (doc) {
+                doc.sectionId = null;
+                updateUnassignedDocuments();
+                updateSectionsDisplay();
+                showSuccessMessage('Document moved to unassigned!');
+            }
+        }
+
+        function selectDocument(docId) {
+            currentDocument = documents.find(doc => doc.id === docId);
+            updateSectionsDisplay();
+            displayDocument(currentDocument);
+        }
+
+        function displayDocument(doc) {
+            const viewer = document.getElementById('documentPreview');
+            viewer.innerHTML = `<iframe class="pdf-embed" src="${doc.url}"></iframe>`;
+            showDocumentView();
+        }
+
+        function showDocumentView() {
+            document.getElementById('documentPreview').style.display = 'flex';
+            document.getElementById('tocPreview').style.display = 'none';
+        }
+
+        function showTOCView() {
+            document.getElementById('documentPreview').style.display = 'none';
+            document.getElementById('tocPreview').style.display = 'block';
+            generateTOC();
+        }
+
+        function showAddSectionForm() {
+            document.getElementById('addSectionForm').style.display = 'block';
+            document.getElementById('newSectionName').focus();
+        }
+
+        function hideAddSectionForm() {
+            document.getElementById('addSectionForm').style.display = 'none';
+            document.getElementById('newSectionName').value = '';
+        }
+
+        function addSection() {
+            const name = document.getElementById('newSectionName').value.trim();
+            if (name) {
+                addSectionToData(name);
+                updateSectionsDisplay();
+                hideAddSectionForm();
+                showSuccessMessage('Section added successfully!');
+            }
+        }
+
+        function removeSection(sectionId) {
+            if (confirm('Are you sure you want to remove this section? Documents will be moved to unassigned.')) {
+                // Move documents back to unassigned
+                documents.forEach(doc => {
+                    if (doc.sectionId === sectionId) {
+                        doc.sectionId = null;
+                    }
+                });
+                
+                // Remove section
+                sections = sections.filter(s => s.id !== sectionId);
+                
+                updateUnassignedDocuments();
+                updateSectionsDisplay();
+                showSuccessMessage('Section removed successfully!');
+            }
+        }
+
+        function startRename(docId) {
+            editingDocument = docId;
+            updateUnassignedDocuments();
+            updateSectionsDisplay();
+        }
+
+        function finishRename(docId, newName) {
+            const doc = documents.find(d => d.id === docId);
+            if (doc && newName.trim()) {
+                doc.displayName = newName.trim();
+            }
+            editingDocument = null;
+            updateUnassignedDocuments();
+            updateSectionsDisplay();
+        }
+
+        function handleRenameKeypress(event, docId, newName) {
+            if (event.key === 'Enter') {
+                finishRename(docId, newName);
+            } else if (event.key === 'Escape') {
+                editingDocument = null;
+                updateUnassignedDocuments();
+                updateSectionsDisplay();
+            }
+        }
+
+        function startSectionRename(sectionId) {
+            editingSection = sectionId;
+            updateSectionsDisplay();
+        }
+
+        function finishSectionRename(sectionId, newName) {
+            const section = sections.find(s => s.id === sectionId);
+            if (section && newName.trim()) {
+                section.name = newName.trim();
+            }
+            editingSection = null;
+            updateSectionsDisplay();
+        }
+
+        function handleSectionRenameKeypress(event, sectionId, newName) {
+            if (event.key === 'Enter') {
+                finishSectionRename(sectionId, newName);
+            } else if (event.key === 'Escape') {
+                editingSection = null;
+                updateSectionsDisplay();
+            }
+        }
+
+        function removeDocument(docId) {
+            const docIndex = documents.findIndex(doc => doc.id === docId);
+            if (docIndex > -1) {
+                if (confirm('Are you sure you want to remove this document?')) {
+                    URL.revokeObjectURL(documents[docIndex].url);
+                    documents.splice(docIndex, 1);
+                    updateUnassignedDocuments();
+                    updateSectionsDisplay();
+                    
+                    if (currentDocument && currentDocument.id === docId) {
+                        currentDocument = null;
+                        document.getElementById('documentPreview').innerHTML = `
+                            <div style="color: #6c757d;">
+                                <i class="fas fa-eye" style="font-size: 3rem; margin-bottom: 15px; display: block;"></i>
+                                Select a document to preview
+                            </div>
+                        `;
+                    }
+                    showSuccessMessage('Document removed successfully!');
+                }
+            }
+        }
+
+        function downloadDocument(docId) {
+            const doc = documents.find(doc => doc.id === docId);
+            if (doc) {
+                const link = document.createElement('a');
+                link.href = doc.url;
+                link.download = doc.name;
+                link.click();
+            }
+        }
+
+        function generateTOC() {
+            const clientName = document.getElementById('clientName').value || '[Client Name]';
+            const matterType = document.getElementById('matterType').value || '[Matter Type]';
+            
+            let tocHTML = `
+                <div class="toc-preview">
+                    <div class="toc-title">TABLE OF CONTENTS</div>
+                    <div style="text-align: center; margin-bottom: 30px; color: #495057;">
+                        <strong>${matterType}</strong><br>
+                        <em>Prepared for ${clientName}</em>
+                    </div>
+            `;
+
+            sections.forEach((section, sectionIndex) => {
+                const sectionDocs = documents.filter(doc => doc.sectionId === section.id);
+                if (sectionDocs.length > 0) {
+                    const sectionNumber = sectionIndex + 1;
+                    
+                    tocHTML += `
+                        <div class="toc-section">
+                            <div class="toc-section-title">${sectionNumber}. ${section.name}</div>
+                    `;
+                    
+                    sectionDocs.forEach((doc, docIndex) => {
+                        const docNumber = `${sectionNumber}.${docIndex + 1}`;
+                        tocHTML += `
+                            <div class="toc-document" onclick="selectDocument(${doc.id})">
+                                <span><strong>${docNumber}</strong> ${doc.displayName}</span>
+                                <span>Page ${(sectionIndex * 10) + docIndex + 3}</span>
+                            </div>
+                        `;
+                    });
+                    
+                    tocHTML += '</div>';
+                }
+            });
+
+            tocHTML += `
+                    <div style="margin-top: 40px; text-align: center; color: #6c757d; font-style: italic;">
+                        ${documents.length} Documents • Generated ${new Date().toLocaleDateString()}
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('tocPreview').innerHTML = tocHTML;
+        }
+
+        function exportBinder() {
+            if (documents.length === 0) {
+                alert('Please upload some documents first.');
+                return;
+            }
+
+            const clientName = document.getElementById('clientName').value || 'Client';
+            const matterType = document.getElementById('matterType').value || 'Matter';
+            const closingDate = document.getElementById('closingDate').value || new Date().toISOString().split('T')[0];
+
+            // Create detailed export summary
+            let summary = `
+PROFESSIONAL CLOSING BINDER
+==========================
+
+CLIENT INFORMATION
+------------------
+Client Name: ${clientName}
+Matter Type: ${matterType}
+Closing Date: ${closingDate}
+Total Documents: ${documents.length}
+Total Sections: ${sections.length}
+
+TABLE OF CONTENTS
+=================
+`;
+
+            sections.forEach((section, sectionIndex) => {
+                const sectionDocs = documents.filter(doc => doc.sectionId === section.id);
+                if (sectionDocs.length > 0) {
+                    const sectionNumber = sectionIndex + 1;
+                    summary += `\n${sectionNumber}. ${section.name}\n`;
+                    
+                    sectionDocs.forEach((doc, docIndex) => {
+                        const docNumber = `${sectionNumber}.${docIndex + 1}`;
+                        summary += `   ${docNumber} ${doc.displayName}\n`;
+                    });
+                }
+            });
+
+            summary += `
+\nFILE NAMING CONVENTION
+=====================
+Documents are named with their section and document numbers:
+[Section].[Document]_[Document_Name].pdf
+
+Example: 1.1_Purchase_Agreement.pdf
+
+EXPORT INFORMATION
+==================
+Generated: ${new Date().toLocaleString()}
+Generated by: Professional Closing Binder Application
+
+© Professional Closing Binder App
+            `;
+
+            // Download summary file
+            const summaryBlob = new Blob([summary], { type: 'text/plain' });
+            const summaryUrl = URL.createObjectURL(summaryBlob);
+            
+            const link = document.createElement('a');
+            link.href = summaryUrl;
+            link.download = `${clientName.replace(/[^a-zA-Z0-9]/g, '_')}_${matterType.replace(/[^a-zA-Z0-9]/g, '_')}_ClosingBinder_Summary.txt`;
+            link.click();
+            
+            URL.revokeObjectURL(summaryUrl);
+
+            // Download all documents with proper numbering
+            let downloadIndex = 0;
+            sections.forEach((section, sectionIndex) => {
+                const sectionDocs = documents.filter(doc => doc.sectionId === section.id);
+                sectionDocs.forEach((doc, docIndex) => {
+                    const sectionNumber = sectionIndex + 1;
+                    const docNumber = `${sectionNumber}.${docIndex + 1}`;
+                    
+                    setTimeout(() => {
+                        const link = document.createElement('a');
+                        link.href = doc.url;
+                        const filename = `${docNumber}_${doc.displayName.replace(/[^a-zA-Z0-9.-]/g, '_')}.pdf`;
+                        link.download = filename;
+                        link.click();
+                    }, downloadIndex * 500);
+                    
+                    downloadIndex++;
+                });
+            });
+
+            showSuccessMessage('Binder export started! Check your downloads folder.');
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function showSuccessMessage(message) {
+            const messageEl = document.getElementById('successMessage');
+            const textEl = document.getElementById('successText');
+            textEl.textContent = message;
+            messageEl.style.display = 'block';
+            setTimeout(() => {
+                messageEl.style.display = 'none';
+            }, 3000);
+        }
+
+        // Handle Enter key in add section form
+        document.getElementById('newSectionName').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                addSection();
+            }
+        });
+    </script>
+</body>
+</html>
