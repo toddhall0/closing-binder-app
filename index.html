@@ -867,6 +867,9 @@
                             </div>
                             <div class="section-controls">
                                 <div class="section-number">${sectionNumber}</div>
+                                <button class="btn-small" onclick="startSectionRename('${section.id}')" title="Rename Section" style="background: #17a2b8; color: white; margin-right: 5px;">
+                                    <i class="fas fa-edit"></i>
+                                </button>
                                 <button class="btn-small btn-remove" onclick="removeSection('${section.id}')" title="Remove Section">
                                     <i class="fas fa-trash"></i>
                                 </button>
@@ -891,17 +894,35 @@
                     sectionDocs.forEach((doc, docIndex) => {
                         const docNumber = `${sectionNumber}.${docIndex + 1}`;
                         const isSelected = currentDocument && currentDocument.id === doc.id;
+                        const isEditingDoc = editingDocument === doc.id;
+                        
                         html += `
                             <div class="section-document ${isSelected ? 'selected' : ''}" 
+                                 draggable="true"
+                                 ondragstart="handleSectionDocumentDragStart(event, ${doc.id})"
+                                 ondragend="handleDocumentDragEnd(event)"
+                                 ondragover="handleDocumentDragOver(event, ${doc.id})"
+                                 ondrop="handleDocumentReorder(event, ${doc.id})"
                                  onclick="selectDocument(${doc.id})">
                                 <div class="doc-number">${docNumber}</div>
                                 <div class="document-info">
-                                    <div class="document-name">${doc.displayName}</div>
-                                    <div class="document-size">${doc.size}</div>
+                                    <div class="document-name" ${isEditingDoc ? '' : `ondblclick="startRename(${doc.id}); event.stopPropagation();"`}>
+                                        ${isEditingDoc ? 
+                                            `<input type="text" class="document-name-input" value="${doc.displayName}" 
+                                             onblur="finishRename(${doc.id}, this.value)" 
+                                             onkeypress="handleRenameKeypress(event, ${doc.id}, this.value)" 
+                                             onclick="event.stopPropagation();" autofocus>` : 
+                                            doc.displayName
+                                        }
+                                    </div>
+                                    <div class="document-size">${doc.size} • Double-click name to rename</div>
                                 </div>
                                 <div class="document-actions">
                                     <button class="btn-small btn-download" onclick="downloadDocument(${doc.id}); event.stopPropagation();" title="Download">
                                         <i class="fas fa-download"></i>
+                                    </button>
+                                    <button class="btn-small" onclick="startRename(${doc.id}); event.stopPropagation();" title="Rename Document" style="background: #17a2b8; color: white;">
+                                        <i class="fas fa-edit"></i>
                                     </button>
                                     <button class="btn-small" onclick="moveDocumentToUnassigned(${doc.id}); event.stopPropagation();" title="Move to Unassigned" style="background: #ffc107; color: #212529;">
                                         <i class="fas fa-undo"></i>
