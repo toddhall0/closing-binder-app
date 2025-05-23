@@ -868,7 +868,7 @@
                          ondragleave="handleSectionDragLeave(event)"
                          ondrop="handleSectionDrop(event, '${section.id}')">
                         <div class="section-header">
-                            <div class="section-title" ${isEditing ? '' : `ondblclick="startSectionRename('${section.id}'); event.stopPropagation();" title="Double-click to rename"`}>
+                            <div class="section-title" ${isEditing ? '' : `ondblclick="event.stopPropagation(); startSectionRename('${section.id}');" title="Double-click to rename" style="cursor: pointer;"`}>
                                 ${isEditing ? 
                                     `<input type="text" class="section-title-input" value="${section.name}" 
                                      onblur="finishSectionRename('${section.id}', this.value)" 
@@ -879,7 +879,7 @@
                             </div>
                             <div class="section-controls">
                                 <div class="section-number">${sectionNumber}</div>
-                                <button class="btn-small" onclick="startSectionRename('${section.id}'); event.stopPropagation();" title="Rename Section" style="background: #17a2b8; color: white; margin-right: 5px;">
+                                <button class="btn-small" onclick="event.stopPropagation(); startSectionRename('${section.id}');" title="Rename Section" style="background: #17a2b8; color: white; margin-right: 5px;">
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 <button class="btn-small btn-remove" onclick="removeSection('${section.id}')" title="Remove Section">
@@ -1315,19 +1315,37 @@
         function generateTOC() {
             const clientName = document.getElementById('clientName').value || '[Client Name]';
             const matterType = document.getElementById('matterType').value || '[Matter Type]';
+            const closingDate = document.getElementById('closingDate').value || new Date().toISOString().split('T')[0];
+            
+            const formattedDate = new Date(closingDate).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
             
             let tocHTML = `
                 <div class="toc-preview">
                     <div class="toc-title">TABLE OF CONTENTS</div>
                     <div style="text-align: center; margin-bottom: 30px; color: #495057;">
                         <strong>${matterType}</strong><br>
-                        <em>Prepared for ${clientName}</em>
+                        <em>Prepared for ${clientName}</em><br>
+                        <small>${formattedDate}</small>
                     </div>
             `;
 
+            let hasContent = false;
             sections.forEach((section, sectionIndex) => {
-                const sectionDocs = documents.filter(doc => doc.sectionId === section.id);
+                const sectionDocs = documents.filter(doc => 
+                    doc.sectionId && doc.sectionId.toString() === section.id.toString()
+                ).sort((a, b) => {
+                    if (a.orderInSection !== undefined && b.orderInSection !== undefined) {
+                        return a.orderInSection - b.orderInSection;
+                    }
+                    return 0;
+                });
+                
                 if (sectionDocs.length > 0) {
+                    hasContent = true;
                     const sectionNumber = sectionIndex + 1;
                     
                     tocHTML += `
@@ -1338,7 +1356,7 @@
                     sectionDocs.forEach((doc, docIndex) => {
                         const docNumber = `${sectionNumber}.${docIndex + 1}`;
                         tocHTML += `
-                            <div class="toc-document" onclick="selectDocument(${doc.id})">
+                            <div class="toc-document" onclick="selectDocument(${doc.id})" style="cursor: pointer;">
                                 <span><strong>${docNumber}</strong> ${doc.displayName}</span>
                                 <span>Page ${(sectionIndex * 10) + docIndex + 3}</span>
                             </div>
@@ -1349,12 +1367,23 @@
                 }
             });
 
-            tocHTML += `
-                    <div style="margin-top: 40px; text-align: center; color: #6c757d; font-style: italic;">
-                        ${documents.length} Documents • Generated ${new Date().toLocaleDateString()}
+            if (!hasContent) {
+                tocHTML += `
+                    <div style="text-align: center; color: #6c757d; padding: 40px; font-style: italic;">
+                        <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 15px; display: block;"></i>
+                        No documents have been assigned to sections yet.<br>
+                        Upload documents and drag them into sections to build your TOC.
                     </div>
-                </div>
-            `;
+                `;
+            } else {
+                tocHTML += `
+                    <div style="margin-top: 40px; text-align: center; color: #6c757d; font-style: italic;">
+                        ${documents.filter(d => d.sectionId).length} Documents Organized • Generated ${new Date().toLocaleDateString()}
+                    </div>
+                `;
+            }
+
+            tocHTML += '</div>';
 
             document.getElementById('tocPreview').innerHTML = tocHTML;
         }
@@ -1369,67 +1398,194 @@
             const matterType = document.getElementById('matterType').value || 'Matter';
             const closingDate = document.getElementById('closingDate').value || new Date().toISOString().split('T')[0];
 
-            // Create detailed export summary
+            // Create cover page HTML for printing/saving
+            const coverPageHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cover Page - ${clientName} ${matterType}</title>
+    <style>
+        body { font-family: 'Times New Roman', serif; padding: 2in; text-align: center; }
+        .cover-title { font-size: 2.5rem; font-weight: bold; margin-bottom: 2rem; }
+        .cover-subtitle { font-size: 1.5rem; margin-bottom: 1rem; }
+        .cover-info { font-size: 1.2rem; margin-bottom: 0.5rem; }
+        .cover-date { font-size: 1rem; margin-top: 2rem; color: #666; }
+    </style>
+</head>
+<body>
+    <div style="margin-top: 3in;">
+        <div class="cover-title">CLOSING BINDER</div>
+        <div class="cover-subtitle">${matterType}</div>
+        <div class="cover-info">Prepared for: ${clientName}</div>
+        <div class="cover-date">${new Date(closingDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+    </div>
+</body>
+</html>
+            `;
+
+            // Create detailed TOC HTML for printing/saving
+            let tocHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Table of Contents - ${clientName} ${matterType}</title>
+    <style>
+        body { font-family: 'Times New Roman', serif; padding: 1in; }
+        .toc-title { text-align: center; font-size: 1.8rem; font-weight: bold; margin-bottom: 2rem; border-bottom: 2px solid #000; padding-bottom: 1rem; }
+        .toc-section-title { font-size: 1.2rem; font-weight: bold; margin: 1.5rem 0 0.5rem 0; border-left: 4px solid #000; padding-left: 10px; }
+        .toc-document { display: flex; justify-content: space-between; padding: 0.5rem 1rem; border-bottom: 1px dotted #ccc; }
+        .toc-footer { text-align: center; margin-top: 2rem; color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="toc-title">TABLE OF CONTENTS</div>
+    <div style="text-align: center; margin-bottom: 2rem;">
+        <strong>${matterType}</strong><br>
+        <em>Prepared for ${clientName}</em><br>
+        ${new Date(closingDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+    </div>
+            `;
+
+            let documentCount = 0;
+            sections.forEach((section, sectionIndex) => {
+                const sectionDocs = documents.filter(doc => 
+                    doc.sectionId && doc.sectionId.toString() === section.id.toString()
+                ).sort((a, b) => {
+                    if (a.orderInSection !== undefined && b.orderInSection !== undefined) {
+                        return a.orderInSection - b.orderInSection;
+                    }
+                    return 0;
+                });
+                
+                if (sectionDocs.length > 0) {
+                    const sectionNumber = sectionIndex + 1;
+                    tocHTML += `<div class="toc-section-title">${sectionNumber}. ${section.name}</div>`;
+                    
+                    sectionDocs.forEach((doc, docIndex) => {
+                        const docNumber = `${sectionNumber}.${docIndex + 1}`;
+                        tocHTML += `
+                            <div class="toc-document">
+                                <span><strong>${docNumber}</strong> ${doc.displayName}</span>
+                                <span>Page ${(sectionIndex * 10) + docIndex + 3}</span>
+                            </div>
+                        `;
+                        documentCount++;
+                    });
+                }
+            });
+
+            tocHTML += `
+    <div class="toc-footer">
+        ${documentCount} Documents Organized • Generated ${new Date().toLocaleDateString()}
+    </div>
+</body>
+</html>
+            `;
+
+            // Create and download cover page
+            const coverBlob = new Blob([coverPageHTML], { type: 'text/html' });
+            const coverUrl = URL.createObjectURL(coverBlob);
+            const coverLink = document.createElement('a');
+            coverLink.href = coverUrl;
+            coverLink.download = `00_Cover_Page_${clientName.replace(/[^a-zA-Z0-9]/g, '_')}_${matterType.replace(/[^a-zA-Z0-9]/g, '_')}.html`;
+            coverLink.click();
+            URL.revokeObjectURL(coverUrl);
+
+            // Create and download TOC
+            const tocBlob = new Blob([tocHTML], { type: 'text/html' });
+            const tocUrl = URL.createObjectURL(tocBlob);
+            const tocLink = document.createElement('a');
+            tocLink.href = tocUrl;
+            tocLink.download = `01_Table_of_Contents_${clientName.replace(/[^a-zA-Z0-9]/g, '_')}_${matterType.replace(/[^a-zA-Z0-9]/g, '_')}.html`;
+            tocLink.click();
+            URL.revokeObjectURL(tocUrl);
+
+            // Create detailed summary text file
             let summary = `
-PROFESSIONAL CLOSING BINDER
-==========================
+PROFESSIONAL CLOSING BINDER EXPORT
+=================================
 
 CLIENT INFORMATION
 ------------------
 Client Name: ${clientName}
 Matter Type: ${matterType}
 Closing Date: ${closingDate}
-Total Documents: ${documents.length}
-Total Sections: ${sections.length}
+Export Date: ${new Date().toLocaleString()}
 
-TABLE OF CONTENTS
-=================
+BINDER CONTENTS
+===============
+Total Sections: ${sections.length}
+Total Documents: ${documentCount}
+Unassigned Documents: ${documents.filter(d => !d.sectionId).length}
+
+DETAILED TABLE OF CONTENTS
+==========================
 `;
 
             sections.forEach((section, sectionIndex) => {
-                const sectionDocs = documents.filter(doc => doc.sectionId === section.id);
+                const sectionDocs = documents.filter(doc => 
+                    doc.sectionId && doc.sectionId.toString() === section.id.toString()
+                ).sort((a, b) => {
+                    if (a.orderInSection !== undefined && b.orderInSection !== undefined) {
+                        return a.orderInSection - b.orderInSection;
+                    }
+                    return 0;
+                });
+                
                 if (sectionDocs.length > 0) {
                     const sectionNumber = sectionIndex + 1;
                     summary += `\n${sectionNumber}. ${section.name}\n`;
+                    summary += `   ${'-'.repeat(section.name.length + 3)}\n`;
                     
                     sectionDocs.forEach((doc, docIndex) => {
                         const docNumber = `${sectionNumber}.${docIndex + 1}`;
                         summary += `   ${docNumber} ${doc.displayName}\n`;
+                        summary += `       Original File: ${doc.name}\n`;
+                        summary += `       File Size: ${doc.size}\n`;
+                        summary += `       Export Name: ${docNumber}_${doc.displayName.replace(/[^a-zA-Z0-9.-]/g, '_')}.pdf\n\n`;
                     });
                 }
             });
 
             summary += `
-\nFILE NAMING CONVENTION
+EXPORT PACKAGE CONTENTS
+=======================
+1. 00_Cover_Page_[ClientName]_[Matter].html - Professional cover page
+2. 01_Table_of_Contents_[ClientName]_[Matter].html - Detailed table of contents  
+3. This summary file with complete binder information
+4. All organized documents with sequential numbering
+
+PRINTING INSTRUCTIONS
 =====================
-Documents are named with their section and document numbers:
-[Section].[Document]_[Document_Name].pdf
+1. Open the Cover Page HTML file in your browser and print
+2. Open the Table of Contents HTML file in your browser and print
+3. Print individual PDF documents in the order shown in the TOC
+4. Assemble in a three-ring binder with tabs for each section
 
-Example: 1.1_Purchase_Agreement.pdf
-
-EXPORT INFORMATION
-==================
-Generated: ${new Date().toLocaleString()}
-Generated by: Professional Closing Binder Application
-
-© Professional Closing Binder App
+© Professional Closing Binder Application
             `;
 
             // Download summary file
             const summaryBlob = new Blob([summary], { type: 'text/plain' });
             const summaryUrl = URL.createObjectURL(summaryBlob);
-            
-            const link = document.createElement('a');
-            link.href = summaryUrl;
-            link.download = `${clientName.replace(/[^a-zA-Z0-9]/g, '_')}_${matterType.replace(/[^a-zA-Z0-9]/g, '_')}_ClosingBinder_Summary.txt`;
-            link.click();
-            
+            const summaryLink = document.createElement('a');
+            summaryLink.href = summaryUrl;
+            summaryLink.download = `02_Binder_Summary_${clientName.replace(/[^a-zA-Z0-9]/g, '_')}_${matterType.replace(/[^a-zA-Z0-9]/g, '_')}.txt`;
+            summaryLink.click();
             URL.revokeObjectURL(summaryUrl);
 
-            // Download all documents with proper numbering
+            // Download all documents with proper numbering and slight delay
             let downloadIndex = 0;
             sections.forEach((section, sectionIndex) => {
-                const sectionDocs = documents.filter(doc => doc.sectionId === section.id);
+                const sectionDocs = documents.filter(doc => 
+                    doc.sectionId && doc.sectionId.toString() === section.id.toString()
+                ).sort((a, b) => {
+                    if (a.orderInSection !== undefined && b.orderInSection !== undefined) {
+                        return a.orderInSection - b.orderInSection;
+                    }
+                    return 0;
+                });
+                
                 sectionDocs.forEach((doc, docIndex) => {
                     const sectionNumber = sectionIndex + 1;
                     const docNumber = `${sectionNumber}.${docIndex + 1}`;
@@ -1440,13 +1596,13 @@ Generated by: Professional Closing Binder Application
                         const filename = `${docNumber}_${doc.displayName.replace(/[^a-zA-Z0-9.-]/g, '_')}.pdf`;
                         link.download = filename;
                         link.click();
-                    }, downloadIndex * 500);
+                    }, (downloadIndex + 3) * 700); // Start after cover, TOC, and summary
                     
                     downloadIndex++;
                 });
             });
 
-            showSuccessMessage('Binder export started! Check your downloads folder.');
+            showSuccessMessage(`Complete binder package export started! Check your downloads: Cover page, TOC, summary, and ${documentCount} documents.`);
         }
 
         function formatFileSize(bytes) {
